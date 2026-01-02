@@ -25,7 +25,6 @@ public class OrderController {
         this.userRepository = userRepository;
     }
 
-    // 1. Place a new order
     @PostMapping
     public ResponseEntity<Order> placeOrder(@RequestBody List<OrderItem> items, Authentication authentication) {
         String username = authentication.getName();
@@ -35,7 +34,6 @@ public class OrderController {
         return ResponseEntity.ok(orderService.createOrder(user, items));
     }
 
-    // 2. View personal order history (Customer)
     @GetMapping("/my-orders")
     public ResponseEntity<List<Order>> getMyOrders(Authentication authentication) {
         String username = authentication.getName();
@@ -44,20 +42,19 @@ public class OrderController {
 
         return ResponseEntity.ok(orderService.getOrdersByUser(user));
     }
+
+    @GetMapping("/all")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<Order>> getAllOrders() {
+        return ResponseEntity.ok(orderService.getAllOrders());
+    }
+
+    // FIXED: Now uses orderService instead of missing orderRepository
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Order> updateOrderStatus(
             @PathVariable Long id,
             @RequestParam OrderStatus status) {
-        Order order = orderService.getOrderById(id); // Ensure you add getOrderById to Service
-        order.setStatus(status);
-        return ResponseEntity.ok(orderRepository.save(order));
-    }
-
-    // 3. View ALL orders (Admin Only)
-    @GetMapping("/all")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<Order>> getAllOrders() {
-        return ResponseEntity.ok(orderService.getAllOrders());
+        return ResponseEntity.ok(orderService.updateStatus(id, status));
     }
 }

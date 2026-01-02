@@ -5,7 +5,6 @@ import com.autohub.api.repository.OrderRepository;
 import com.autohub.api.repository.PartRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -42,15 +41,21 @@ public class OrderService {
         return orderRepository.count();
     }
 
+    // NEW: Centralized method to update status
+    @Transactional
+    public Order updateStatus(Long id, OrderStatus status) {
+        Order order = getOrderById(id);
+        order.setStatus(status);
+        return orderRepository.save(order);
+    }
+
     @Transactional
     public Order createOrder(User user, List<OrderItem> items) {
         Order order = new Order();
         order.setUser(user);
-
         BigDecimal total = BigDecimal.ZERO;
 
         for (OrderItem item : items) {
-            // 1. Verify Part exists and check stock
             Part part = partRepository.findById(item.getPart().getId())
                     .orElseThrow(() -> new RuntimeException("Part not found"));
 
@@ -58,22 +63,16 @@ public class OrderService {
                 throw new RuntimeException("Insufficient stock for: " + part.getName());
             }
 
-            // 2. Deduct Stock
             part.setStockQuantity(part.getStockQuantity() - item.getQuantity());
             partRepository.save(part);
 
-            // 3. Set Price at time of purchase
             item.setPriceAtPurchase(part.getPrice());
-
-            // 4. Update Totals
             BigDecimal itemTotal = part.getPrice().multiply(new BigDecimal(item.getQuantity()));
             total = total.add(itemTotal);
         }
 
         order.setItems(items);
         order.setTotalAmount(total);
-
-        // Starts as PENDING to allow admin oversight
         order.setStatus(OrderStatus.PENDING);
 
         return orderRepository.save(order);
