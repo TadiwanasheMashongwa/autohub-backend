@@ -1,23 +1,26 @@
 package com.autohub.api.model;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.Getter;
+import lombok.Setter;
 
 @Entity
 @Table(name = "roles")
 @Getter @Setter
-@NoArgsConstructor
-@AllArgsConstructor
 public class Role {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(unique = true, nullable = false)
-    private String name; // e.g., "ROLE_USER", "ROLE_ADMIN"
+    private String name;
 
-    // MANUAL GETTER - This fixes the "cannot find symbol getName()" error
-    public String getName() {
-        return this.name;
+    // Manual No-Args Constructor
+    public Role() {}
+
+    // Manual All-Args Constructor
+    public Role(Long id, String name) {
+        this.id = id;
+        this.name = name;
     }
 }

@@ -23,7 +23,7 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        // 1. Ensure Roles exist
+        // 1. Create Roles if they don't exist
         if (roleRepository.findByName("ROLE_ADMIN").isEmpty()) {
             roleRepository.save(new Role(null, "ROLE_ADMIN"));
         }
@@ -31,16 +31,19 @@ public class DataInitializer implements CommandLineRunner {
             roleRepository.save(new Role(null, "ROLE_CUSTOMER"));
         }
 
-        // 2. Ensure Admin exists with a FRESHLY hashed password
+        // 2. Create Admin if it doesn't exist
         if (userRepository.findByUsername("admin@autohub.co.zw").isEmpty()) {
-            Role adminRole = roleRepository.findByName("ROLE_ADMIN").get();
+            Role adminRole = roleRepository.findByName("ROLE_ADMIN")
+                    .orElseThrow(() -> new RuntimeException("ROLE_ADMIN not found"));
+
             User admin = new User();
             admin.setUsername("admin@autohub.co.zw");
-            // This line ensures the hash matches your ApplicationConfig bean perfectly
+            // This hashes the password using YOUR specific BCrypt bean
             admin.setPassword(passwordEncoder.encode("password"));
             admin.setRole(adminRole);
+
             userRepository.save(admin);
-            System.out.println("INITIALIZATION: Admin user created successfully.");
+            System.out.println("--- INITIALIZATION: Admin user created successfully ---");
         }
     }
 }
