@@ -51,6 +51,8 @@ public class AuthenticationService {
 
     public AuthenticationResponse authenticate(RegisterRequest request) {
         // This will now use the BCryptPasswordEncoder defined in SecurityConfig
+        System.out.println("Attempting login for: " + request.getUsername());
+        System.out.println("Password received: " + (request.getPassword() != null ? "[PROTECTED]" : "NULL"));
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.getUsername(),
