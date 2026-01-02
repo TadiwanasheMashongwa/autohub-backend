@@ -22,7 +22,11 @@ public class Order {
     @Enumerated(EnumType.STRING)
     private OrderStatus status;
 
-    private BigDecimal totalAmount;
+    private BigDecimal totalAmount; // Net total after discount
+
+    // NEW LOGISTICS FOR MARKETING
+    private BigDecimal discountAmount = BigDecimal.ZERO;
+    private String couponCode;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "order_id")
@@ -33,19 +37,21 @@ public class Order {
         this.status = OrderStatus.PENDING;
     }
 
-    // --- MANUAL GETTERS ---
     public Long getId() { return id; }
     public User getUser() { return user; }
     public LocalDateTime getOrderDate() { return orderDate; }
     public OrderStatus getStatus() { return status; }
     public BigDecimal getTotalAmount() { return totalAmount; }
     public List<OrderItem> getItems() { return items; }
+    public BigDecimal getDiscountAmount() { return discountAmount; }
+    public String getCouponCode() { return couponCode; }
 
-    // --- MANUAL SETTERS (Fixes the OrderService error) ---
     public void setId(Long id) { this.id = id; }
-    public void setUser(User user) { this.user = user; } // THE FIX
+    public void setUser(User user) { this.user = user; }
     public void setOrderDate(LocalDateTime orderDate) { this.orderDate = orderDate; }
     public void setStatus(OrderStatus status) { this.status = status; }
     public void setTotalAmount(BigDecimal totalAmount) { this.totalAmount = totalAmount; }
     public void setItems(List<OrderItem> items) { this.items = items; }
+    public void setDiscountAmount(BigDecimal discountAmount) { this.discountAmount = discountAmount; }
+    public void setCouponCode(String couponCode) { this.couponCode = couponCode; }
 }

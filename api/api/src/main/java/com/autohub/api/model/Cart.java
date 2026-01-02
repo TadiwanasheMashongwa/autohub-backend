@@ -18,6 +18,11 @@ public class Cart {
     @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CartItem> items = new ArrayList<>();
 
+    // NEW: The "Active" coupon for this session
+    @ManyToOne
+    @JoinColumn(name = "applied_coupon_id")
+    private Coupon appliedCoupon;
+
     public Cart() {}
     public Cart(User user) { this.user = user; }
 
@@ -26,4 +31,8 @@ public class Cart {
     public void setUser(User user) { this.user = user; }
     public List<CartItem> getItems() { return items; }
     public void setItems(List<CartItem> items) { this.items = items; }
+
+    // NEW GETTER/SETTER
+    public Coupon getAppliedCoupon() { return appliedCoupon; }
+    public void setAppliedCoupon(Coupon appliedCoupon) { this.appliedCoupon = appliedCoupon; }
 }
