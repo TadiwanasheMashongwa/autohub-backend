@@ -18,19 +18,21 @@ public class PartService {
     public List<Part> getAllParts() {
         return partRepository.findAll();
     }
+
     public List<Part> getLowStockParts(int threshold) {
-        // Finds parts where stock is less than or equal to the threshold (e.g., 5 units)
-        return repository.findAll().stream()
+        // FIXED: Uses 'partRepository' to match the constructor variable name
+        return partRepository.findAll().stream()
                 .filter(part -> part.getStockQuantity() <= threshold)
                 .toList();
     }
+
     public Part savePart(Part part) {
-        // Check Barcode
+        // 1. Strict Barcode Validation
         if (partRepository.findByBarcode(part.getBarcode()).isPresent()) {
             throw new RuntimeException("Duplicate Error: Barcode " + part.getBarcode() + " already exists.");
         }
 
-        // Check SKU (You'll need findBySku in your Repository)
+        // 2. Strict SKU Validation
         if (partRepository.findBySku(part.getSku()).isPresent()) {
             throw new RuntimeException("Duplicate Error: SKU " + part.getSku() + " already exists.");
         }
@@ -38,8 +40,12 @@ public class PartService {
         return partRepository.save(part);
     }
 
-    // ADD THIS: Logic to find the part by barcode
     public Optional<Part> getPartByBarcode(String barcode) {
         return partRepository.findByBarcode(barcode);
+    }
+
+    public Part getPartById(Long id) {
+        return partRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Part not found with id: " + id));
     }
 }

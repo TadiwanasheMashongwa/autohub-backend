@@ -18,11 +18,20 @@ public class OrderService {
         this.orderRepository = orderRepository;
         this.partRepository = partRepository;
     }
-    // Add these methods to the bottom of your OrderService class
+
     public List<Order> getOrdersByUser(User user) {
         return orderRepository.findByUser(user);
     }
-    // Add these to your existing OrderService
+
+    public List<Order> getAllOrders() {
+        return orderRepository.findAll();
+    }
+
+    public Order getOrderById(Long id) {
+        return orderRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Order not found with id: " + id));
+    }
+
     public BigDecimal calculateTotalRevenue() {
         return orderRepository.findAll().stream()
                 .map(Order::getTotalAmount)
@@ -31,9 +40,6 @@ public class OrderService {
 
     public long getTotalOrderCount() {
         return orderRepository.count();
-    }
-    public List<Order> getAllOrders() {
-        return orderRepository.findAll();
     }
 
     @Transactional
@@ -66,7 +72,9 @@ public class OrderService {
 
         order.setItems(items);
         order.setTotalAmount(total);
-        order.setStatus(OrderStatus.COMPLETED);
+
+        // Starts as PENDING to allow admin oversight
+        order.setStatus(OrderStatus.PENDING);
 
         return orderRepository.save(order);
     }
