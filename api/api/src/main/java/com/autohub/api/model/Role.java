@@ -1,12 +1,9 @@
 package com.autohub.api.model;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
 
 @Entity
 @Table(name = "roles")
-@Getter @Setter
 public class Role {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,4 +20,12 @@ public class Role {
         this.id = id;
         this.name = name;
     }
+
+    // --- MANUAL GETTERS (Fixes the AuthenticationService error) ---
+    public Long getId() { return id; }
+    public String getName() { return name; }
+
+    // --- MANUAL SETTERS ---
+    public void setId(Long id) { this.id = id; }
+    public void setName(String name) { this.name = name; }
 }
