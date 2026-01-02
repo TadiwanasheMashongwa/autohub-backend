@@ -17,9 +17,14 @@ public class Category {
     @NotBlank(message = "Category name is required") // Validation added
     @Column(nullable = false, unique = true)
     private String name;
+    // MANUAL SETTERS
+    public void setId(Long id) { this.id = id; }
     public void setName(String name){
         this.name=name;
     };
+    // MANUAL GETTERS - The fix for the empty {} in Postman
+    public Long getId() { return id; }
+    public String getName() { return name; }
 
     private String description;
 }
