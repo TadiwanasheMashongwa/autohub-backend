@@ -19,20 +19,27 @@ public class PartService {
         return partRepository.findAll();
     }
 
+    // NEW: Advanced Search logic
+    public List<Part> searchParts(String query) {
+        return partRepository.searchParts(query);
+    }
+
+    // NEW: Category Filter logic
+    public List<Part> getPartsByCategory(Long categoryId) {
+        return partRepository.findByCategoryId(categoryId);
+    }
+
     public List<Part> getLowStockParts(int threshold) {
-        // FIXED: Uses 'partRepository' to match the constructor variable name
         return partRepository.findAll().stream()
                 .filter(part -> part.getStockQuantity() <= threshold)
                 .toList();
     }
 
     public Part savePart(Part part) {
-        // 1. Strict Barcode Validation
         if (partRepository.findByBarcode(part.getBarcode()).isPresent()) {
             throw new RuntimeException("Duplicate Error: Barcode " + part.getBarcode() + " already exists.");
         }
 
-        // 2. Strict SKU Validation
         if (partRepository.findBySku(part.getSku()).isPresent()) {
             throw new RuntimeException("Duplicate Error: SKU " + part.getSku() + " already exists.");
         }
