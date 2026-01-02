@@ -13,13 +13,14 @@ import java.util.List;
 public class OrderService {
     private final OrderRepository orderRepository;
     private final PartRepository partRepository;
+    private final EmailService emailService;
 
-    public OrderService(OrderRepository orderRepository, PartRepository partRepository) {
+    public OrderService(OrderRepository orderRepository, PartRepository partRepository, EmailService emailService) {
         this.orderRepository = orderRepository;
         this.partRepository = partRepository;
+        this.emailService = emailService;
     }
 
-    // NEW: Method to convert Cart to Order (The Bulk Checkout)
     @Transactional
     public Order checkoutCart(User user) {
         Cart cart = user.getCart();
@@ -36,8 +37,6 @@ public class OrderService {
         }
 
         Order order = createOrder(user, orderItems);
-
-        // Clear cart after successful order creation
         cart.getItems().clear();
         return order;
     }
@@ -69,7 +68,16 @@ public class OrderService {
     public Order updateStatus(Long id, OrderStatus status) {
         Order order = getOrderById(id);
         order.setStatus(status);
-        return orderRepository.save(order);
+        Order updatedOrder = orderRepository.save(order);
+
+        // Notify user of status change
+        try {
+            emailService.sendOrderConfirmation(updatedOrder);
+        } catch (Exception e) {
+            System.err.println("Email notification failed: " + e.getMessage());
+        }
+
+        return updatedOrder;
     }
 
     @Transactional
@@ -86,7 +94,6 @@ public class OrderService {
                 throw new RuntimeException("Insufficient stock for: " + part.getName());
             }
 
-            // Deduct Stock
             part.setStockQuantity(part.getStockQuantity() - item.getQuantity());
             partRepository.save(part);
 
@@ -99,6 +106,15 @@ public class OrderService {
         order.setTotalAmount(total);
         order.setStatus(OrderStatus.PENDING);
 
-        return orderRepository.save(order);
+        Order savedOrder = orderRepository.save(order);
+
+        // Send confirmation email
+        try {
+            emailService.sendOrderConfirmation(savedOrder);
+        } catch (Exception e) {
+            System.err.println("Email notification failed: " + e.getMessage());
+        }
+
+        return savedOrder;
     }
 }
