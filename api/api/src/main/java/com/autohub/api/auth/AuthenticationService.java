@@ -50,25 +50,18 @@ public class AuthenticationService {
     }
 
     public AuthenticationResponse authenticate(RegisterRequest request) {
-        // This will now use the BCryptPasswordEncoder defined in SecurityConfig
-        System.out.println("Attempting login for: " + request.getUsername());
-        System.out.println("Password received: " + (request.getPassword() != null ? "[PROTECTED]" : "NULL"));
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.getUsername(),
-                        request.getPassword()
-                )
-        );
-
         User user = repository.findByUsername(request.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found after authentication"));
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // DIAGNOSTIC: This will tell us if the match is true or false
+        boolean isMatch = passwordEncoder.matches(request.getPassword(), user.getPassword());
+        System.out.println("DEBUG: Password Match Result = " + isMatch);
+
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
+        );
 
         String jwtToken = jwtService.generateToken(user);
-
-        return new AuthenticationResponse(
-                jwtToken,
-                user.getRole().getName(),
-                user.getUsername()
-        );
+        return new AuthenticationResponse(jwtToken, user.getRole().getName(), user.getUsername());
     }
 }

@@ -23,27 +23,29 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        // 1. Create Roles if they don't exist
-        if (roleRepository.findByName("ROLE_ADMIN").isEmpty()) {
-            roleRepository.save(new Role(null, "ROLE_ADMIN"));
-        }
-        if (roleRepository.findByName("ROLE_CUSTOMER").isEmpty()) {
-            roleRepository.save(new Role(null, "ROLE_CUSTOMER"));
-        }
+        // 1. Ensure Roles exist
+        Role adminRole = roleRepository.findByName("ROLE_ADMIN")
+                .orElseGet(() -> roleRepository.save(new Role(null, "ROLE_ADMIN")));
 
-        // 2. Create Admin if it doesn't exist
-        if (userRepository.findByUsername("admin@autohub.co.zw").isEmpty()) {
-            Role adminRole = roleRepository.findByName("ROLE_ADMIN")
-                    .orElseThrow(() -> new RuntimeException("ROLE_ADMIN not found"));
+        // 2. FORCE REFRESH the Admin password
+        userRepository.findByUsername("admin@autohub.co.zw").ifPresentOrElse(
+                (existingAdmin) -> {
+                    // Force update existing user with the current encoder's hash
+                    existingAdmin.setPassword(passwordEncoder.encode("password"));
+                    existingAdmin.setRole(adminRole);
+                    userRepository.save(existingAdmin);
+                    System.out.println(">>> DATA: Admin password force-updated.");
+                },
+                () -> {
+                    // Create fresh if not exists
+                    User admin = new User();
+                    admin.setUsername("admin@autohub.co.zw");
+                    admin.setPassword(passwordEncoder.encode("password"));
+                    admin.setRole(adminRole);
+                    userRepository.save(admin);
+                    System.out.println(">>> DATA: Admin account created fresh.");
+                }
+        );
 
-            User admin = new User();
-            admin.setUsername("admin@autohub.co.zw");
-            // This hashes the password using YOUR specific BCrypt bean
-            admin.setPassword(passwordEncoder.encode("password"));
-            admin.setRole(adminRole);
-
-            userRepository.save(admin);
-            System.out.println("--- INITIALIZATION: Admin user created successfully ---");
-        }
     }
 }
