@@ -15,15 +15,19 @@ public class OrderItem {
     private Part part;
 
     private Integer quantity;
-    private BigDecimal priceAtPurchase; // Important if the part price changes later
+    private BigDecimal priceAtPurchase;
 
     public OrderItem() {}
 
-    // Manual Getters/Setters
+    // Manual Getters
+    public Long getId() { return id; }
     public Part getPart() { return part; }
-    public void setPart(Part part) { this.part = part; }
     public Integer getQuantity() { return quantity; }
-    public void setQuantity(Integer quantity) { this.quantity = quantity; }
     public BigDecimal getPriceAtPurchase() { return priceAtPurchase; }
+
+    // Manual Setters
+    public void setId(Long id) { this.id = id; }
+    public void setPart(Part part) { this.part = part; }
+    public void setQuantity(Integer quantity) { this.quantity = quantity; }
     public void setPriceAtPurchase(BigDecimal priceAtPurchase) { this.priceAtPurchase = priceAtPurchase; }
 }
