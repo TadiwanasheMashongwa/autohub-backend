@@ -17,6 +17,9 @@ public class Category {
     @NotBlank(message = "Category name is required") // Validation added
     @Column(nullable = false, unique = true)
     private String name;
+    public void setName(String name){
+        this.name=name;
+    };
 
     private String description;
 }
