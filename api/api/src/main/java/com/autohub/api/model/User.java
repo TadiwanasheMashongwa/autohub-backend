@@ -1,7 +1,10 @@
 package com.autohub.api.model;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -11,7 +14,8 @@ import java.util.List;
 
 @Entity
 @Table(name = "users")
-@Getter @Setter
+@Data // This provides getters, setters, and more
+@Builder // This allows User.builder()...
 @NoArgsConstructor
 @AllArgsConstructor
 public class User implements UserDetails {
@@ -31,6 +35,7 @@ public class User implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
+        // Return the role name as a granted authority
         return List.of(new SimpleGrantedAuthority(role.getName()));
     }
 
