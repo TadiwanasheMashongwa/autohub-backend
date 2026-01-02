@@ -5,6 +5,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
@@ -16,19 +17,22 @@ public class User implements UserDetails {
     private Long id;
 
     @Column(unique = true, nullable = false)
-    private String username; // This serves as the email for notifications
+    private String username;
 
     @Column(nullable = false)
     private String password;
 
-    // --- LOGISTICS FIELDS ---
     private String firstName;
     private String lastName;
     private String phoneNumber;
-    private String businessName; // Optional for garages/workshops
+    private String businessName;
 
     @Column(columnDefinition = "TEXT")
     private String address;
+
+    // --- SECURITY FIELDS FOR PASSWORD RESET ---
+    private String resetToken;
+    private LocalDateTime resetTokenExpiry;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "role_id")
@@ -54,6 +58,8 @@ public class User implements UserDetails {
     public String getPhoneNumber() { return phoneNumber; }
     public String getBusinessName() { return businessName; }
     public String getAddress() { return address; }
+    public String getResetToken() { return resetToken; }
+    public LocalDateTime getResetTokenExpiry() { return resetTokenExpiry; }
 
     // --- SETTERS ---
     public void setId(Long id) { this.id = id; }
@@ -66,6 +72,8 @@ public class User implements UserDetails {
     public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
     public void setBusinessName(String businessName) { this.businessName = businessName; }
     public void setAddress(String address) { this.address = address; }
+    public void setResetToken(String resetToken) { this.resetToken = resetToken; }
+    public void setResetTokenExpiry(LocalDateTime resetTokenExpiry) { this.resetTokenExpiry = resetTokenExpiry; }
 
     @Override public String getUsername() { return username; }
     @Override public String getPassword() { return password; }

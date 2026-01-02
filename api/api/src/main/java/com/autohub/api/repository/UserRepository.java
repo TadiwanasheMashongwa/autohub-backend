@@ -9,10 +9,11 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByUsername(String username);
 
-    // NEW: Find all users who are NOT admins (useful for customer lists)
+    // NEW: Find user by token
+    Optional<User> findByResetToken(String resetToken);
+
     @Query("SELECT u FROM User u WHERE u.role.name = 'ROLE_CUSTOMER'")
     List<User> findAllCustomers();
 
-    // NEW: Count total customers for dashboard stats
     long countByRoleName(String roleName);
 }
