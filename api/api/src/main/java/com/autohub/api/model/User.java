@@ -1,10 +1,7 @@
 package com.autohub.api.model;
 
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
+import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -14,8 +11,7 @@ import java.util.List;
 
 @Entity
 @Table(name = "users")
-@Data // This provides getters, setters, and more
-@Builder // This allows User.builder()...
+@Getter @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class User implements UserDetails {
@@ -33,12 +29,18 @@ public class User implements UserDetails {
     @JoinColumn(name = "role_id")
     private Role role;
 
+    // --- MANUAL SETTERS TO RESOLVE COMPILER ERRORS ---
+    public void setUsername(String username) { this.username = username; }
+    public void setPassword(String password) { this.password = password; }
+    public void setRole(Role role) { this.role = role; }
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // Return the role name as a granted authority
         return List.of(new SimpleGrantedAuthority(role.getName()));
     }
 
+    @Override public String getUsername() { return this.username; }
+    @Override public String getPassword() { return this.password; }
     @Override public boolean isAccountNonExpired() { return true; }
     @Override public boolean isAccountNonLocked() { return true; }
     @Override public boolean isCredentialsNonExpired() { return true; }
