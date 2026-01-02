@@ -50,11 +50,17 @@ public class AuthenticationService {
     }
 
     public AuthenticationResponse authenticate(RegisterRequest request) {
+        // This will now use the BCryptPasswordEncoder defined in SecurityConfig
         authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
+                new UsernamePasswordAuthenticationToken(
+                        request.getUsername(),
+                        request.getPassword()
+                )
         );
 
-        User user = repository.findByUsername(request.getUsername()).orElseThrow();
+        User user = repository.findByUsername(request.getUsername())
+                .orElseThrow(() -> new RuntimeException("User not found after authentication"));
+
         String jwtToken = jwtService.generateToken(user);
 
         return new AuthenticationResponse(
