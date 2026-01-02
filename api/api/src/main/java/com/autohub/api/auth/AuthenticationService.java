@@ -3,7 +3,7 @@ package com.autohub.api.auth;
 import com.autohub.api.model.User;
 import com.autohub.api.model.Role;
 import com.autohub.api.repository.UserRepository;
-import com.autohub.api.repository.RoleRepository; // You will need to create this Interface
+import com.autohub.api.repository.RoleRepository;
 import com.autohub.api.service.JwtService;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -29,9 +29,9 @@ public class AuthenticationService {
     }
 
     public AuthenticationResponse register(RegisterRequest request) {
-        // Find or create the "ROLE_CUSTOMER" role
+        // 1. Assign the default role for public registration
         Role userRole = roleRepository.findByName("ROLE_CUSTOMER")
-                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                .orElseThrow(() -> new RuntimeException("Error: ROLE_CUSTOMER not found in DB."));
 
         User user = new User();
         user.setUsername(request.getUsername());
@@ -40,25 +40,28 @@ public class AuthenticationService {
 
         repository.save(user);
 
+        // 2. Generate token and return full identity package
         String jwtToken = jwtService.generateToken(user);
-        return AuthenticationResponse.builder()
-                .token(jwtToken)
-                .role(user.getRole().getName())
-                .username(user.getUsername())
-                .build();
-    }
+        return new AuthenticationResponse(
+                jwtToken,
+                user.getRole().getName(),
+                user.getUsername()
+        );
+    } // Braced fixed here
 
     public AuthenticationResponse authenticate(RegisterRequest request) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
         );
+
         User user = repository.findByUsername(request.getUsername()).orElseThrow();
         String jwtToken = jwtService.generateToken(user);
 
-        return AuthenticationResponse.builder()
-                .token(jwtToken)
-                .role(user.getRole().getName())
-                .username(user.getUsername())
-                .build();
+        // 3. Replaced builder with standard constructor for reliability
+        return new AuthenticationResponse(
+                jwtToken,
+                user.getRole().getName(),
+                user.getUsername()
+        );
     }
 }
