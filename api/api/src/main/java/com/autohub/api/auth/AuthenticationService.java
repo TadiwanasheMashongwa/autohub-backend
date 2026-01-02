@@ -39,6 +39,13 @@ public class AuthenticationService {
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(userRole);
 
+        // Mapping New Logistics Fields
+        user.setFirstName(request.getFirstName());
+        user.setLastName(request.getLastName());
+        user.setPhoneNumber(request.getPhoneNumber());
+        user.setBusinessName(request.getBusinessName());
+        user.setAddress(request.getAddress());
+
         repository.save(user);
 
         String jwtToken = jwtService.generateToken(user);
@@ -52,10 +59,6 @@ public class AuthenticationService {
     public AuthenticationResponse authenticate(RegisterRequest request) {
         User user = repository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new RuntimeException("User not found"));
-
-        // DIAGNOSTIC: This will tell us if the match is true or false
-        boolean isMatch = passwordEncoder.matches(request.getPassword(), user.getPassword());
-        System.out.println("DEBUG: Password Match Result = " + isMatch);
 
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())

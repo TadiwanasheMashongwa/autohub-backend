@@ -16,16 +16,24 @@ public class User implements UserDetails {
     private Long id;
 
     @Column(unique = true, nullable = false)
-    private String username;
+    private String username; // This serves as the email for notifications
 
     @Column(nullable = false)
     private String password;
+
+    // --- LOGISTICS FIELDS ---
+    private String firstName;
+    private String lastName;
+    private String phoneNumber;
+    private String businessName; // Optional for garages/workshops
+
+    @Column(columnDefinition = "TEXT")
+    private String address;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "role_id")
     private Role role;
 
-    // NEW: Link to the shopping cart
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private Cart cart;
 
@@ -37,19 +45,30 @@ public class User implements UserDetails {
         this.role = role;
     }
 
+    // --- GETTERS ---
     public Long getId() { return id; }
     public Role getRole() { return role; }
-
-    // NEW GETTER/SETTER FOR CART
     public Cart getCart() { return cart; }
-    public void setCart(Cart cart) { this.cart = cart; }
+    public String getFirstName() { return firstName; }
+    public String getLastName() { return lastName; }
+    public String getPhoneNumber() { return phoneNumber; }
+    public String getBusinessName() { return businessName; }
+    public String getAddress() { return address; }
 
-    @Override public String getUsername() { return username; }
-    @Override public String getPassword() { return password; }
+    // --- SETTERS ---
     public void setId(Long id) { this.id = id; }
+    public void setCart(Cart cart) { this.cart = cart; }
     public void setUsername(String username) { this.username = username; }
     public void setPassword(String password) { this.password = password; }
     public void setRole(Role role) { this.role = role; }
+    public void setFirstName(String firstName) { this.firstName = firstName; }
+    public void setLastName(String lastName) { this.lastName = lastName; }
+    public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
+    public void setBusinessName(String businessName) { this.businessName = businessName; }
+    public void setAddress(String address) { this.address = address; }
+
+    @Override public String getUsername() { return username; }
+    @Override public String getPassword() { return password; }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
