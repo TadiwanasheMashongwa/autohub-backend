@@ -14,12 +14,14 @@ import org.springframework.stereotype.Service;
 public class AuthenticationService {
     private final UserRepository repository;
     private final RoleRepository roleRepository;
-    private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final PasswordEncoder passwordEncoder;
 
-    public AuthenticationService(UserRepository repository, RoleRepository roleRepository,
-                                 PasswordEncoder passwordEncoder, JwtService jwtService,
+    public AuthenticationService(UserRepository repository,
+                                 RoleRepository roleRepository,
+                                 PasswordEncoder passwordEncoder,
+                                 JwtService jwtService,
                                  AuthenticationManager authenticationManager) {
         this.repository = repository;
         this.roleRepository = roleRepository;
@@ -29,9 +31,8 @@ public class AuthenticationService {
     }
 
     public AuthenticationResponse register(RegisterRequest request) {
-        // 1. Assign the default role for public registration
         Role userRole = roleRepository.findByName("ROLE_CUSTOMER")
-                .orElseThrow(() -> new RuntimeException("Error: ROLE_CUSTOMER not found in DB."));
+                .orElseThrow(() -> new RuntimeException("Error: ROLE_CUSTOMER not found."));
 
         User user = new User();
         user.setUsername(request.getUsername());
@@ -40,14 +41,13 @@ public class AuthenticationService {
 
         repository.save(user);
 
-        // 2. Generate token and return full identity package
         String jwtToken = jwtService.generateToken(user);
         return new AuthenticationResponse(
                 jwtToken,
                 user.getRole().getName(),
                 user.getUsername()
         );
-    } // Braced fixed here
+    }
 
     public AuthenticationResponse authenticate(RegisterRequest request) {
         authenticationManager.authenticate(
@@ -57,7 +57,6 @@ public class AuthenticationService {
         User user = repository.findByUsername(request.getUsername()).orElseThrow();
         String jwtToken = jwtService.generateToken(user);
 
-        // 3. Replaced builder with standard constructor for reliability
         return new AuthenticationResponse(
                 jwtToken,
                 user.getRole().getName(),

@@ -1,18 +1,25 @@
 package com.autohub.api.auth;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 @Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class AuthenticationResponse {
     private String token;
     private String role;
     private String username;
 
-    // Manual constructor for safety since the builder is failing
+    // MANUAL NO-ARGS CONSTRUCTOR
+    public AuthenticationResponse() {
+    }
+
+    // MANUAL ALL-ARGS CONSTRUCTOR - This fixes the compiler error
+    public AuthenticationResponse(String token, String role, String username) {
+        this.token = token;
+        this.role = role;
+        this.username = username;
+    }
+
+    // Static helper method
     public static AuthenticationResponse of(String token, String role, String username) {
         return new AuthenticationResponse(token, role, username);
     }
