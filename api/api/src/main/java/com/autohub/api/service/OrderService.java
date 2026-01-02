@@ -22,7 +22,16 @@ public class OrderService {
     public List<Order> getOrdersByUser(User user) {
         return orderRepository.findByUser(user);
     }
+    // Add these to your existing OrderService
+    public BigDecimal calculateTotalRevenue() {
+        return orderRepository.findAll().stream()
+                .map(Order::getTotalAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
 
+    public long getTotalOrderCount() {
+        return orderRepository.count();
+    }
     public List<Order> getAllOrders() {
         return orderRepository.findAll();
     }

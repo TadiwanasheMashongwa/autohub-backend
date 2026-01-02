@@ -18,7 +18,12 @@ public class PartService {
     public List<Part> getAllParts() {
         return partRepository.findAll();
     }
-
+    public List<Part> getLowStockParts(int threshold) {
+        // Finds parts where stock is less than or equal to the threshold (e.g., 5 units)
+        return repository.findAll().stream()
+                .filter(part -> part.getStockQuantity() <= threshold)
+                .toList();
+    }
     public Part savePart(Part part) {
         // Check Barcode
         if (partRepository.findByBarcode(part.getBarcode()).isPresent()) {

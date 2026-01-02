@@ -2,6 +2,7 @@ package com.autohub.api.controller;
 
 import com.autohub.api.model.Order;
 import com.autohub.api.model.OrderItem;
+import com.autohub.api.model.OrderStatus;
 import com.autohub.api.model.User;
 import com.autohub.api.repository.UserRepository;
 import com.autohub.api.service.OrderService;
@@ -42,6 +43,15 @@ public class OrderController {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         return ResponseEntity.ok(orderService.getOrdersByUser(user));
+    }
+    @PatchMapping("/{id}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Order> updateOrderStatus(
+            @PathVariable Long id,
+            @RequestParam OrderStatus status) {
+        Order order = orderService.getOrderById(id); // Ensure you add getOrderById to Service
+        order.setStatus(status);
+        return ResponseEntity.ok(orderRepository.save(order));
     }
 
     // 3. View ALL orders (Admin Only)
