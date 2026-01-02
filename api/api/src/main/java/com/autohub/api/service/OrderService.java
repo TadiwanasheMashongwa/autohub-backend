@@ -18,6 +18,14 @@ public class OrderService {
         this.orderRepository = orderRepository;
         this.partRepository = partRepository;
     }
+    // Add these methods to the bottom of your OrderService class
+    public List<Order> getOrdersByUser(User user) {
+        return orderRepository.findByUser(user);
+    }
+
+    public List<Order> getAllOrders() {
+        return orderRepository.findAll();
+    }
 
     @Transactional
     public Order createOrder(User user, List<OrderItem> items) {
