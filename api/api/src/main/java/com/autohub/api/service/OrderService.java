@@ -6,6 +6,7 @@ import com.autohub.api.repository.PartRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -16,6 +17,29 @@ public class OrderService {
     public OrderService(OrderRepository orderRepository, PartRepository partRepository) {
         this.orderRepository = orderRepository;
         this.partRepository = partRepository;
+    }
+
+    // NEW: Method to convert Cart to Order (The Bulk Checkout)
+    @Transactional
+    public Order checkoutCart(User user) {
+        Cart cart = user.getCart();
+        if (cart == null || cart.getItems().isEmpty()) {
+            throw new RuntimeException("Cannot checkout an empty cart");
+        }
+
+        List<OrderItem> orderItems = new ArrayList<>();
+        for (CartItem cartItem : cart.getItems()) {
+            OrderItem oi = new OrderItem();
+            oi.setPart(cartItem.getPart());
+            oi.setQuantity(cartItem.getQuantity());
+            orderItems.add(oi);
+        }
+
+        Order order = createOrder(user, orderItems);
+
+        // Clear cart after successful order creation
+        cart.getItems().clear();
+        return order;
     }
 
     public List<Order> getOrdersByUser(User user) {
@@ -41,7 +65,6 @@ public class OrderService {
         return orderRepository.count();
     }
 
-    // NEW: Centralized method to update status
     @Transactional
     public Order updateStatus(Long id, OrderStatus status) {
         Order order = getOrderById(id);
@@ -63,6 +86,7 @@ public class OrderService {
                 throw new RuntimeException("Insufficient stock for: " + part.getName());
             }
 
+            // Deduct Stock
             part.setStockQuantity(part.getStockQuantity() - item.getQuantity());
             partRepository.save(part);
 

@@ -25,7 +25,10 @@ public class User implements UserDetails {
     @JoinColumn(name = "role_id")
     private Role role;
 
-    // --- MANUAL CONSTRUCTORS ---
+    // NEW: Link to the shopping cart
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Cart cart;
+
     public User() {}
 
     public User(String username, String password, Role role) {
@@ -34,27 +37,20 @@ public class User implements UserDetails {
         this.role = role;
     }
 
-    // --- MANUAL GETTERS (Fixes the "cannot find symbol" errors) ---
     public Long getId() { return id; }
-
     public Role getRole() { return role; }
 
-    @Override
-    public String getUsername() { return username; }
+    // NEW GETTER/SETTER FOR CART
+    public Cart getCart() { return cart; }
+    public void setCart(Cart cart) { this.cart = cart; }
 
-    @Override
-    public String getPassword() { return password; }
-
-    // --- MANUAL SETTERS ---
+    @Override public String getUsername() { return username; }
+    @Override public String getPassword() { return password; }
     public void setId(Long id) { this.id = id; }
-
     public void setUsername(String username) { this.username = username; }
-
     public void setPassword(String password) { this.password = password; }
-
     public void setRole(Role role) { this.role = role; }
 
-    // --- SECURITY METHODS ---
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority(role.getName()));
