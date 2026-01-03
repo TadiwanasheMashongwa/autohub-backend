@@ -33,7 +33,7 @@ public class User implements UserDetails {
     private String resetToken;
     private LocalDateTime resetTokenExpiry;
 
-    // --- NEW MFA FIELDS ---
+    // --- MFA FIELDS ---
     private boolean mfaEnabled = false;
     private String mfaSecret;
 
@@ -46,20 +46,13 @@ public class User implements UserDetails {
 
     public User() {}
 
-    // --- GETTERS ---
+    // --- GETTERS & SETTERS ---
     public Long getId() { return id; }
     public String getUsername() { return username; }
     public String getPassword() { return password; }
-    public Role getRole() { return role; }
     public boolean isMfaEnabled() { return mfaEnabled; }
-    public String getMfaSecret() { return mfaSecret; }
-    public String getFirstName() { return firstName; }
-    public String getLastName() { return lastName; }
-
-    // --- SETTERS ---
-    public void setUsername(String username) { this.username = username; }
-    public void setPassword(String password) { this.password = password; }
     public void setMfaEnabled(boolean mfaEnabled) { this.mfaEnabled = mfaEnabled; }
+    public String getMfaSecret() { return mfaSecret; }
     public void setMfaSecret(String mfaSecret) { this.mfaSecret = mfaSecret; }
     public void setRole(Role role) { this.role = role; }
 
