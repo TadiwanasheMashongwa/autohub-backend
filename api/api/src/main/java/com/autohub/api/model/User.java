@@ -46,15 +46,35 @@ public class User implements UserDetails {
 
     public User() {}
 
-    // --- GETTERS & SETTERS ---
+    // --- GETTERS ---
     public Long getId() { return id; }
     public String getUsername() { return username; }
     public String getPassword() { return password; }
+    public String getFirstName() { return firstName; }
+    public String getLastName() { return lastName; }
+    public String getPhoneNumber() { return phoneNumber; }
+    public String getBusinessName() { return businessName; }
+    public String getAddress() { return address; }
     public boolean isMfaEnabled() { return mfaEnabled; }
-    public void setMfaEnabled(boolean mfaEnabled) { this.mfaEnabled = mfaEnabled; }
     public String getMfaSecret() { return mfaSecret; }
+    public Role getRole() { return role; }
+    public String getResetToken() { return resetToken; }
+    public LocalDateTime getResetTokenExpiry() { return resetTokenExpiry; }
+
+    // --- SETTERS (Fixed Missing Symbols) ---
+    public void setId(Long id) { this.id = id; }
+    public void setUsername(String username) { this.username = username; }
+    public void setPassword(String password) { this.password = password; }
+    public void setFirstName(String firstName) { this.firstName = firstName; }
+    public void setLastName(String lastName) { this.lastName = lastName; }
+    public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
+    public void setBusinessName(String businessName) { this.businessName = businessName; }
+    public void setAddress(String address) { this.address = address; }
+    public void setMfaEnabled(boolean mfaEnabled) { this.mfaEnabled = mfaEnabled; }
     public void setMfaSecret(String mfaSecret) { this.mfaSecret = mfaSecret; }
     public void setRole(Role role) { this.role = role; }
+    public void setResetToken(String resetToken) { this.resetToken = resetToken; }
+    public void setResetTokenExpiry(LocalDateTime resetTokenExpiry) { this.resetTokenExpiry = resetTokenExpiry; }
 
     @Override public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority(role.getName()));
