@@ -2,11 +2,14 @@ package com.autohub.api.controller;
 
 import com.autohub.api.model.Part;
 import com.autohub.api.service.PartService;
+
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
 
 @RestController
 @RequestMapping("/api/parts")
@@ -15,6 +18,11 @@ public class PartController {
 
     public PartController(PartService service) {
         this.service = service;
+    }
+    @GetMapping
+    @Cacheable(value = "parts", key = "#pageable.pageNumber") // CACHED
+    public ResponseEntity<Page<Part>> getAllParts(Pageable pageable) {
+        return ResponseEntity.ok(service.getAllParts(pageable));
     }
 
     @GetMapping
