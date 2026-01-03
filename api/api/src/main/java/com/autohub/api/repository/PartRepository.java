@@ -23,8 +23,11 @@ public interface PartRepository extends JpaRepository<Part, Long> {
             "LOWER(p.oemNumber) LIKE LOWER(CONCAT('%', :query, '%'))")
     Page<Part> searchParts(@Param("query") String query, Pageable pageable);
 
-    // UPDATED: Filter by Category ID with Pagination
+    // Filter by Category ID with Pagination
     Page<Part> findByCategoryId(Long categoryId, Pageable pageable);
 
     Page<Part> findByBrandIgnoreCase(String brand, Pageable pageable);
+
+    // FIXED: Added missing method required by PartService for Admin Dashboard
+    Page<Part> findByStockQuantityLessThan(int threshold, Pageable pageable);
 }
