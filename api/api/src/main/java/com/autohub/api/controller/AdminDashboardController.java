@@ -6,7 +6,6 @@ import com.autohub.api.model.User;
 import com.autohub.api.repository.UserRepository;
 import com.autohub.api.service.OrderService;
 import com.autohub.api.service.PartService;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -17,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/admin/dashboard")
+@RequestMapping("/api/v1/admin/dashboard")
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminDashboardController {
 
@@ -32,18 +31,12 @@ public class AdminDashboardController {
     }
 
     @PostMapping("/orders/{orderId}/ship")
-    public ResponseEntity<Order> shipOrder(
-            @PathVariable Long orderId,
-            @RequestParam String courierName,
-            @RequestParam String trackingNumber) {
+    public ResponseEntity<Order> shipOrder(@PathVariable Long orderId, @RequestParam String courierName, @RequestParam String trackingNumber) {
         return ResponseEntity.ok(orderService.shipOrder(orderId, courierName, trackingNumber));
     }
 
     @PostMapping("/orders/{orderId}/refund")
-    public ResponseEntity<Order> issueRefund(
-            @PathVariable Long orderId,
-            @RequestParam BigDecimal amount,
-            @RequestParam boolean restock) {
+    public ResponseEntity<Order> issueRefund(@PathVariable Long orderId, @RequestParam BigDecimal amount, @RequestParam boolean restock) {
         return ResponseEntity.ok(orderService.processRefund(orderId, amount, restock));
     }
 
@@ -53,10 +46,7 @@ public class AdminDashboardController {
         stats.put("totalRevenue", orderService.calculateTotalRevenue());
         stats.put("totalOrders", orderService.getTotalOrderCount());
         stats.put("totalCustomers", userRepository.countByRoleName("ROLE_CUSTOMER"));
-
-        // FIXED: Uses the new List-based helper
         stats.put("lowStockCount", partService.getLowStockPartsList(5).size());
-
         return ResponseEntity.ok(stats);
     }
 
@@ -67,7 +57,6 @@ public class AdminDashboardController {
 
     @GetMapping("/low-stock")
     public ResponseEntity<List<Part>> getLowStockReport() {
-        // FIXED: Uses the new List-based helper
         return ResponseEntity.ok(partService.getLowStockPartsList(5));
     }
 

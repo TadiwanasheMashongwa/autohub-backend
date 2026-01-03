@@ -11,7 +11,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/cart")
+@RequestMapping("/api/v1/cart")
 public class CartController {
 
     private final CartService cartService;
@@ -42,16 +42,9 @@ public class CartController {
         return ResponseEntity.ok(cartService.removeItemFromCart(user, id));
     }
 
-    /**
-     * Checkout the cart and create a PENDING order.
-     * @param idempotencyKey Required to prevent duplicate orders during network retries.
-     */
     @PostMapping("/checkout")
-    public ResponseEntity<Order> checkout(
-            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
-            Authentication authentication) {
+    public ResponseEntity<Order> checkout(@RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey, Authentication authentication) {
         User user = getUserFromAuth(authentication);
-        // FIXED: Now passing the required String argument to OrderService
         return ResponseEntity.ok(orderService.checkoutCart(user, idempotencyKey));
     }
 

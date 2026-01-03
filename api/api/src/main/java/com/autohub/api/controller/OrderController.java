@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/orders")
+@RequestMapping("/api/v1/orders")
 public class OrderController {
 
     private final OrderService orderService;
@@ -24,14 +24,8 @@ public class OrderController {
         this.userRepository = userRepository;
     }
 
-    /**
-     * Replaces placeOrder with hardened checkout logic.
-     * Uses Idempotency-Key to prevent duplicate orders.
-     */
     @PostMapping("/checkout")
-    public ResponseEntity<Order> checkout(
-            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
-            Authentication authentication) {
+    public ResponseEntity<Order> checkout(@RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey, Authentication authentication) {
         User user = getUserFromAuth(authentication);
         return ResponseEntity.ok(orderService.checkoutCart(user, idempotencyKey));
     }
@@ -50,9 +44,7 @@ public class OrderController {
 
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Order> updateOrderStatus(
-            @PathVariable Long id,
-            @RequestParam OrderStatus status) {
+    public ResponseEntity<Order> updateOrderStatus(@PathVariable Long id, @RequestParam OrderStatus status) {
         return ResponseEntity.ok(orderService.updateStatus(id, status));
     }
 
