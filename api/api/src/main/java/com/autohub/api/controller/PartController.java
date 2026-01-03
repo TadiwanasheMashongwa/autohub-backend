@@ -10,7 +10,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/parts") // Added Versioning
+@RequestMapping("/api/v1/parts")
 public class PartController {
     private final PartService service;
 
@@ -19,13 +19,10 @@ public class PartController {
     }
 
     @GetMapping
-    // FIX: Using a complex key to prevent page-size collisions
     @Cacheable(value = "parts", key = "{#pageable.pageNumber, #pageable.pageSize}")
     public ResponseEntity<Page<Part>> getAllParts(Pageable pageable) {
         return ResponseEntity.ok(service.getAllParts(pageable));
     }
-
-    // REMOVED: Duplicate getAllParts method was here
 
     @GetMapping("/search")
     public ResponseEntity<Page<Part>> search(@RequestParam String query, Pageable pageable) {
@@ -35,6 +32,12 @@ public class PartController {
     @GetMapping("/category/{categoryId}")
     public ResponseEntity<Page<Part>> getByCategory(@PathVariable Long categoryId, Pageable pageable) {
         return ResponseEntity.ok(service.getPartsByCategory(categoryId, pageable));
+    }
+
+    // NEW: Get parts by vehicle ID
+    @GetMapping("/vehicle/{vehicleId}")
+    public ResponseEntity<Page<Part>> getByVehicle(@PathVariable Long vehicleId, Pageable pageable) {
+        return ResponseEntity.ok(service.getPartsByVehicle(vehicleId, pageable));
     }
 
     @PostMapping

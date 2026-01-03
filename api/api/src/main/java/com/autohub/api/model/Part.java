@@ -49,15 +49,23 @@ public class Part {
   @OneToMany(mappedBy = "part", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<Review> reviews = new ArrayList<>();
 
+  // NEW: Added Many-to-Many relationship for Vehicle Compatibility
+  @ManyToMany
+  @JoinTable(
+          name = "part_vehicle_compatibility",
+          joinColumns = @JoinColumn(name = "part_id"),
+          inverseJoinColumns = @JoinColumn(name = "vehicle_id")
+  )
+  private List<Vehicle> compatibleVehicles = new ArrayList<>();
+
   private Double averageRating = 0.0;
 
-  // NEW: OPTIMISTIC LOCKING VERSION
   @Version
   private Long version;
 
   public Part() {}
 
-  // --- MANUAL GETTERS & SETTERS ---
+  // --- GETTERS & SETTERS ---
   public Long getId() { return id; }
   public void setId(Long id) { this.id = id; }
   public String getName() { return name; }
@@ -86,7 +94,7 @@ public class Part {
   public void setReviews(List<Review> reviews) { this.reviews = reviews; }
   public Double getAverageRating() { return averageRating; }
   public void setAverageRating(Double averageRating) { this.averageRating = averageRating; }
-
-  // NEW VERSION GETTER
+  public List<Vehicle> getCompatibleVehicles() { return compatibleVehicles; }
+  public void setCompatibleVehicles(List<Vehicle> compatibleVehicles) { this.compatibleVehicles = compatibleVehicles; }
   public Long getVersion() { return version; }
 }
