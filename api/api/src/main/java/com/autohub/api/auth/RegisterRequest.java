@@ -13,6 +13,10 @@ public class RegisterRequest {
 
     // GETTERS
     public String getUsername() { return username; }
+
+    // Alias to fix the compilation error in the controller
+    public String getEmail() { return username; }
+
     public String getPassword() { return password; }
     public String getFirstName() { return firstName; }
     public String getLastName() { return lastName; }

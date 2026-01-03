@@ -10,6 +10,9 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.HashSet;
+import java.util.Set;
+
 @Service
 public class AuthenticationService {
     private final UserRepository repository;
@@ -17,6 +20,9 @@ public class AuthenticationService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final PasswordEncoder passwordEncoder;
+
+    // Simple In-memory Blacklist for Revocation logic
+    private final Set<String> tokenBlacklist = new HashSet<>();
 
     public AuthenticationService(UserRepository repository,
                                  RoleRepository roleRepository,
@@ -39,7 +45,6 @@ public class AuthenticationService {
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(userRole);
 
-        // Mapping New Logistics Fields
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
         user.setPhoneNumber(request.getPhoneNumber());
@@ -48,6 +53,24 @@ public class AuthenticationService {
 
         repository.save(user);
 
+        return generateTokenForUser(user);
+    }
+
+    public boolean isValidCredentials(RegisterRequest request) {
+        User user = repository.findByUsername(request.getUsername()).orElse(null);
+        if (user == null) return false;
+        return passwordEncoder.matches(request.getPassword(), user.getPassword());
+    }
+
+    public AuthenticationResponse authenticate(RegisterRequest request) {
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
+        );
+        User user = repository.findByUsername(request.getUsername()).orElseThrow();
+        return generateTokenForUser(user);
+    }
+
+    public AuthenticationResponse generateTokenForUser(User user) {
         String jwtToken = jwtService.generateToken(user);
         return new AuthenticationResponse(
                 jwtToken,
@@ -56,15 +79,11 @@ public class AuthenticationService {
         );
     }
 
-    public AuthenticationResponse authenticate(RegisterRequest request) {
-        User user = repository.findByUsername(request.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    public void blacklistToken(String token) {
+        tokenBlacklist.add(token);
+    }
 
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
-        );
-
-        String jwtToken = jwtService.generateToken(user);
-        return new AuthenticationResponse(jwtToken, user.getRole().getName(), user.getUsername());
+    public boolean isTokenBlacklisted(String token) {
+        return tokenBlacklist.contains(token);
     }
 }

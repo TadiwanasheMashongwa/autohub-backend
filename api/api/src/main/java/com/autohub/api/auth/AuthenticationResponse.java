@@ -13,12 +13,12 @@ public class AuthenticationResponse {
         this.username = username;
     }
 
-    // MANUAL GETTERS - CRITICAL for Postman to show data
+    // GETTERS
     public String getToken() { return token; }
     public String getRole() { return role; }
     public String getUsername() { return username; }
 
-    // MANUAL SETTERS
+    // SETTERS
     public void setToken(String token) { this.token = token; }
     public void setRole(String role) { this.role = role; }
     public void setUsername(String username) { this.username = username; }
