@@ -1,5 +1,6 @@
 package com.autohub.api.controller;
 
+import com.autohub.api.model.Order;
 import com.autohub.api.model.Part;
 import com.autohub.api.model.User;
 import com.autohub.api.repository.UserRepository;
@@ -9,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,7 +29,13 @@ public class AdminDashboardController {
         this.partService = partService;
         this.userRepository = userRepository;
     }
-
+    @PostMapping("/orders/{orderId}/refund")
+    public ResponseEntity<Order> issueRefund(
+            @PathVariable Long orderId,
+            @RequestParam BigDecimal amount,
+            @RequestParam boolean restock) {
+        return ResponseEntity.ok(orderService.processRefund(orderId, amount, restock));
+    }
     @GetMapping("/stats")
     public ResponseEntity<Map<String, Object>> getDashboardStats() {
         Map<String, Object> stats = new HashMap<>();

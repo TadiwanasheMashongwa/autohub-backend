@@ -1,5 +1,10 @@
 package com.autohub.api.model;
 
 public enum OrderStatus {
-    PENDING, COMPLETED, CANCELLED
+    PENDING,
+    COMPLETED,
+    CANCELLED,
+    RETURN_REQUESTED,
+    RETURNED,
+    REFUNDED
 }
