@@ -2,7 +2,6 @@ package com.autohub.api.auth;
 
 import com.autohub.api.model.User;
 import com.autohub.api.repository.UserRepository;
-import com.autohub.api.auth.AuthenticationService;
 import com.autohub.api.service.MfaService;
 import com.autohub.api.service.RateLimitService;
 import io.github.bucket4j.Bucket;
@@ -83,14 +82,13 @@ public class AuthenticationController {
         }
     }
 
-    // HARDENING: Token Revocation / Logout
     @PostMapping("/logout")
     public ResponseEntity<?> logout(HttpServletRequest request) {
         String authHeader = request.getHeader("Authorization");
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
-            service.blacklistToken(token); // Logic to store in Redis/DB Blacklist
-            return ResponseEntity.ok("Successfully logged out and token invalidated.");
+            service.blacklistToken(token);
+            return ResponseEntity.ok("Successfully logged out.");
         }
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid logout request.");
     }
