@@ -5,7 +5,6 @@ import com.autohub.api.model.Part;
 import com.autohub.api.repository.AuditLogRepository;
 import com.autohub.api.repository.PartRepository;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -38,12 +37,15 @@ public class PartService {
         return partRepository.findByCategoryId(categoryId, pageable);
     }
 
-    // Paginated version for full reports
+    // NEW: Logic for filtering by compatible vehicle
+    public Page<Part> getPartsByVehicle(Long vehicleId, Pageable pageable) {
+        return partRepository.findByCompatibleVehiclesId(vehicleId, pageable);
+    }
+
     public Page<Part> getLowStockParts(int threshold, Pageable pageable) {
         return partRepository.findByStockQuantityLessThan(threshold, pageable);
     }
 
-    // NEW Helper: Non-paginated list for quick dashboard stats
     public List<Part> getLowStockPartsList(int threshold) {
         return partRepository.findAll().stream()
                 .filter(p -> p.getStockQuantity() < threshold)
