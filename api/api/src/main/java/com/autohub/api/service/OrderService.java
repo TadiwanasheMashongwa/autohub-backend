@@ -86,7 +86,6 @@ public class OrderService {
         order.setUser(user);
         BigDecimal subtotal = BigDecimal.ZERO;
 
-        // HARDENING: Price re-verification against DB
         for (OrderItem item : items) {
             Part part = partRepository.findById(item.getPart().getId())
                     .orElseThrow(() -> new RuntimeException("Part not found"));
@@ -156,16 +155,12 @@ public class OrderService {
     @Transactional
     public Order processRefund(Long orderId, BigDecimal amount, boolean restockItems) {
         Order order = orderRepository.findById(orderId).orElseThrow();
-
-        // HARDENING: Over-refund Protection
         BigDecimal potentialTotalRefund = order.getRefundedAmount().add(amount);
-        if (potentialTotalRefund.compareTo(order.getTotalAmount()) > 1) {
+        if (potentialTotalRefund.compareTo(order.getTotalAmount()) > 0) {
             throw new RuntimeException("Refund Policy Violation: Total refund cannot exceed order amount.");
         }
-
         order.setRefundedAmount(potentialTotalRefund);
         order.setStatus(OrderStatus.REFUNDED);
-
         if (restockItems) {
             for (OrderItem item : order.getItems()) {
                 Part part = item.getPart();
@@ -173,8 +168,6 @@ public class OrderService {
                 partRepository.save(part);
             }
         }
-
-        auditLogRepository.save(new AuditLog("ORDER_REFUND", "ADMIN", "Order #" + orderId + " refunded: " + amount));
         return orderRepository.save(order);
     }
 

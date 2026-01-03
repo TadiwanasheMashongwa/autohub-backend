@@ -58,10 +58,11 @@ public class User implements UserDetails {
     public boolean isMfaEnabled() { return mfaEnabled; }
     public String getMfaSecret() { return mfaSecret; }
     public Role getRole() { return role; }
+    public Cart getCart() { return cart; } // FIXED: Added missing getter
     public String getResetToken() { return resetToken; }
     public LocalDateTime getResetTokenExpiry() { return resetTokenExpiry; }
 
-    // --- SETTERS (Fixed Missing Symbols) ---
+    // --- SETTERS ---
     public void setId(Long id) { this.id = id; }
     public void setUsername(String username) { this.username = username; }
     public void setPassword(String password) { this.password = password; }
@@ -73,10 +74,12 @@ public class User implements UserDetails {
     public void setMfaEnabled(boolean mfaEnabled) { this.mfaEnabled = mfaEnabled; }
     public void setMfaSecret(String mfaSecret) { this.mfaSecret = mfaSecret; }
     public void setRole(Role role) { this.role = role; }
+    public void setCart(Cart cart) { this.cart = cart; } // FIXED: Added missing setter
     public void setResetToken(String resetToken) { this.resetToken = resetToken; }
     public void setResetTokenExpiry(LocalDateTime resetTokenExpiry) { this.resetTokenExpiry = resetTokenExpiry; }
 
     @Override public Collection<? extends GrantedAuthority> getAuthorities() {
+        if (role == null) return List.of();
         return List.of(new SimpleGrantedAuthority(role.getName()));
     }
     @Override public boolean isAccountNonExpired() { return true; }

@@ -19,13 +19,11 @@ public class OrderItem {
 
     public OrderItem() {}
 
-    // Manual Getters
     public Long getId() { return id; }
     public Part getPart() { return part; }
     public Integer getQuantity() { return quantity; }
     public BigDecimal getPriceAtPurchase() { return priceAtPurchase; }
 
-    // Manual Setters
     public void setId(Long id) { this.id = id; }
     public void setPart(Part part) { this.part = part; }
     public void setQuantity(Integer quantity) { this.quantity = quantity; }
