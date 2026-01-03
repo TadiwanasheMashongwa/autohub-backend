@@ -29,10 +29,13 @@ public class Order {
     private String returnReason;
     private String couponCode;
 
-    // --- NEW LOGISTICS FIELDS ---
     private String trackingNumber;
     private String courierName;
     private LocalDateTime shippedDate;
+
+    // --- NEW PAYMENT FIELDS ---
+    private String paymentId; // External Provider Reference
+    private String paymentStatus; // e.g., "SUCCEEDED", "FAILED", "PENDING"
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "order_id")
@@ -57,6 +60,8 @@ public class Order {
     public String getTrackingNumber() { return trackingNumber; }
     public String getCourierName() { return courierName; }
     public LocalDateTime getShippedDate() { return shippedDate; }
+    public String getPaymentId() { return paymentId; }
+    public String getPaymentStatus() { return paymentStatus; }
 
     // --- SETTERS ---
     public void setId(Long id) { this.id = id; }
@@ -72,4 +77,6 @@ public class Order {
     public void setTrackingNumber(String trackingNumber) { this.trackingNumber = trackingNumber; }
     public void setCourierName(String courierName) { this.courierName = courierName; }
     public void setShippedDate(LocalDateTime shippedDate) { this.shippedDate = shippedDate; }
+    public void setPaymentId(String paymentId) { this.paymentId = paymentId; }
+    public void setPaymentStatus(String paymentStatus) { this.paymentStatus = paymentStatus; }
 }

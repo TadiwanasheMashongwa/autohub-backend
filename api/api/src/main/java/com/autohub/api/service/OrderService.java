@@ -65,6 +65,7 @@ public class OrderService {
             orderItems.add(oi);
         }
 
+        // Create Order as PENDING_PAYMENT
         Order order = createOrderWithCoupon(user, orderItems, cart.getAppliedCoupon());
         cart.getItems().clear();
         cart.setAppliedCoupon(null);
@@ -90,13 +91,6 @@ public class OrderService {
             Part part = partRepository.findById(item.getPart().getId())
                     .orElseThrow(() -> new RuntimeException("Part not found"));
 
-            if (part.getStockQuantity() < item.getQuantity()) {
-                throw new RuntimeException("Insufficient stock for: " + part.getName());
-            }
-
-            part.setStockQuantity(part.getStockQuantity() - item.getQuantity());
-            partRepository.save(part);
-
             item.setPriceAtPurchase(part.getPrice());
             BigDecimal itemTotal = part.getPrice().multiply(new BigDecimal(item.getQuantity()));
             subtotal = subtotal.add(itemTotal);
@@ -115,73 +109,58 @@ public class OrderService {
         order.setItems(items);
         order.setDiscountAmount(discount);
         order.setTotalAmount(subtotal.subtract(discount));
-        order.setStatus(OrderStatus.PENDING);
+        order.setStatus(OrderStatus.PENDING); // Awaiting Payment confirmation
 
-        Order savedOrder = orderRepository.save(order);
-
-        try {
-            emailService.sendOrderConfirmation(savedOrder);
-        } catch (Exception e) {
-            System.err.println("Email notification failed: " + e.getMessage());
-        }
-
-        return savedOrder;
+        return orderRepository.save(order);
     }
 
-    // --- LOGISTICS & RECOVERY METHODS ---
-
+    // --- FINANCIAL INTEGRITY: CONFIRM PAYMENT ---
     @Transactional
-    public Order shipOrder(Long orderId, String courierName, String trackingNumber) {
+    public Order confirmPayment(Long orderId, String paymentId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
 
         if (order.getStatus() != OrderStatus.PENDING) {
-            throw new RuntimeException("Only pending orders can be shipped.");
+            throw new RuntimeException("Order is not in a state to be paid.");
         }
 
-        order.setStatus(OrderStatus.SHIPPED);
-        order.setCourierName(courierName);
-        order.setTrackingNumber(trackingNumber);
-        order.setShippedDate(LocalDateTime.now());
+        // Deduct Stock NOW that money is confirmed
+        for (OrderItem item : order.getItems()) {
+            Part part = item.getPart();
+            if (part.getStockQuantity() < item.getQuantity()) {
+                throw new RuntimeException("Stock sold out during payment process for: " + part.getName());
+            }
+            part.setStockQuantity(part.getStockQuantity() - item.getQuantity());
+            partRepository.save(part);
+        }
 
+        order.setPaymentId(paymentId);
+        order.setPaymentStatus("SUCCEEDED");
+        order.setStatus(OrderStatus.COMPLETED);
         Order savedOrder = orderRepository.save(order);
 
-        String adminName = SecurityContextHolder.getContext().getAuthentication().getName();
-        auditLogRepository.save(new AuditLog(
-                "ORDER_SHIPPED",
-                adminName,
-                String.format("Order #%d dispatched via %s. Tracking: %s", orderId, courierName, trackingNumber)
-        ));
+        // Audit & Notify
+        auditLogRepository.save(new AuditLog("PAYMENT_CONFIRMED", "SYSTEM", "Order #" + orderId + " paid via " + paymentId));
+        emailService.sendOrderConfirmation(savedOrder);
 
         return savedOrder;
     }
 
     @Transactional
-    public Order requestReturn(Long orderId, String reason) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
-
-        if (order.getStatus() != OrderStatus.COMPLETED && order.getStatus() != OrderStatus.DELIVERED) {
-            throw new RuntimeException("Only delivered or completed orders can be returned.");
-        }
-
-        order.setStatus(OrderStatus.RETURN_REQUESTED);
-        order.setReturnReason(reason);
+    public Order shipOrder(Long orderId, String courierName, String trackingNumber) {
+        Order order = orderRepository.findById(orderId).orElseThrow();
+        order.setStatus(OrderStatus.SHIPPED);
+        order.setCourierName(courierName);
+        order.setTrackingNumber(trackingNumber);
+        order.setShippedDate(LocalDateTime.now());
         return orderRepository.save(order);
     }
 
     @Transactional
     public Order processRefund(Long orderId, BigDecimal amount, boolean restockItems) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
-
-        if (amount.compareTo(order.getTotalAmount()) > 0) {
-            throw new RuntimeException("Refund amount cannot exceed total order amount.");
-        }
-
+        Order order = orderRepository.findById(orderId).orElseThrow();
         order.setRefundedAmount(amount);
         order.setStatus(OrderStatus.REFUNDED);
-
         if (restockItems) {
             for (OrderItem item : order.getItems()) {
                 Part part = item.getPart();
@@ -189,22 +168,12 @@ public class OrderService {
                 partRepository.save(part);
             }
         }
-
-        Order savedOrder = orderRepository.save(order);
-
-        String adminName = SecurityContextHolder.getContext().getAuthentication().getName();
-        auditLogRepository.save(new AuditLog(
-                "ORDER_REFUND",
-                adminName,
-                String.format("Order #%d refunded. Amount: %s. Restocked: %b", orderId, amount, restockItems)
-        ));
-
-        return savedOrder;
+        return orderRepository.save(order);
     }
 
     public BigDecimal calculateTotalRevenue() {
         return orderRepository.findAll().stream()
-                .filter(o -> o.getStatus() == OrderStatus.COMPLETED || o.getStatus() == OrderStatus.SHIPPED || o.getStatus() == OrderStatus.DELIVERED)
+                .filter(o -> o.getStatus() == OrderStatus.COMPLETED || o.getStatus() == OrderStatus.SHIPPED)
                 .map(o -> o.getTotalAmount().subtract(o.getRefundedAmount()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
