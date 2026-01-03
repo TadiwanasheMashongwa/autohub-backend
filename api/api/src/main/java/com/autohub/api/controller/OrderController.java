@@ -1,7 +1,6 @@
 package com.autohub.api.controller;
 
 import com.autohub.api.model.Order;
-import com.autohub.api.model.OrderItem;
 import com.autohub.api.model.OrderStatus;
 import com.autohub.api.model.User;
 import com.autohub.api.repository.UserRepository;
@@ -25,21 +24,21 @@ public class OrderController {
         this.userRepository = userRepository;
     }
 
-    @PostMapping
-    public ResponseEntity<Order> placeOrder(@RequestBody List<OrderItem> items, Authentication authentication) {
-        String username = authentication.getName();
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        return ResponseEntity.ok(orderService.createOrder(user, items));
+    /**
+     * Replaces placeOrder with hardened checkout logic.
+     * Uses Idempotency-Key to prevent duplicate orders.
+     */
+    @PostMapping("/checkout")
+    public ResponseEntity<Order> checkout(
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+            Authentication authentication) {
+        User user = getUserFromAuth(authentication);
+        return ResponseEntity.ok(orderService.checkoutCart(user, idempotencyKey));
     }
 
     @GetMapping("/my-orders")
     public ResponseEntity<List<Order>> getMyOrders(Authentication authentication) {
-        String username = authentication.getName();
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
+        User user = getUserFromAuth(authentication);
         return ResponseEntity.ok(orderService.getOrdersByUser(user));
     }
 
@@ -49,12 +48,16 @@ public class OrderController {
         return ResponseEntity.ok(orderService.getAllOrders());
     }
 
-    // FIXED: Now uses orderService instead of missing orderRepository
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Order> updateOrderStatus(
             @PathVariable Long id,
             @RequestParam OrderStatus status) {
         return ResponseEntity.ok(orderService.updateStatus(id, status));
+    }
+
+    private User getUserFromAuth(Authentication authentication) {
+        return userRepository.findByUsername(authentication.getName())
+                .orElseThrow(() -> new RuntimeException("User not found"));
     }
 }

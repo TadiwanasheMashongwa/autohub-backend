@@ -6,7 +6,6 @@ import com.autohub.api.repository.IdempotencyRepository;
 import com.autohub.api.repository.OrderRepository;
 import com.autohub.api.repository.PartRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -113,11 +112,24 @@ public class OrderService {
         return orderRepository.save(order);
     }
 
+    public List<Order> getOrdersByUser(User user) {
+        return orderRepository.findByUser(user);
+    }
+
+    public List<Order> getAllOrders() {
+        return orderRepository.findAll();
+    }
+
+    @Transactional
+    public Order updateStatus(Long id, OrderStatus status) {
+        Order order = orderRepository.findById(id).orElseThrow();
+        order.setStatus(status);
+        return orderRepository.save(order);
+    }
+
     @Transactional
     public Order confirmPayment(Long orderId, String paymentId) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
-
+        Order order = orderRepository.findById(orderId).orElseThrow();
         if (order.getStatus() != OrderStatus.PENDING) {
             throw new RuntimeException("Order is not in a state to be paid.");
         }
@@ -125,7 +137,7 @@ public class OrderService {
         for (OrderItem item : order.getItems()) {
             Part part = partRepository.findById(item.getPart().getId()).orElseThrow();
             if (part.getStockQuantity() < item.getQuantity()) {
-                throw new RuntimeException("Stock sold out during payment for: " + part.getName());
+                throw new RuntimeException("Stock sold out for: " + part.getName());
             }
             part.setStockQuantity(part.getStockQuantity() - item.getQuantity());
             partRepository.save(part);
@@ -135,10 +147,8 @@ public class OrderService {
         order.setPaymentStatus("SUCCEEDED");
         order.setStatus(OrderStatus.COMPLETED);
         Order savedOrder = orderRepository.save(order);
-
-        auditLogRepository.save(new AuditLog("PAYMENT_CONFIRMED", "SYSTEM", "Order #" + orderId + " paid via " + paymentId));
+        auditLogRepository.save(new AuditLog("PAYMENT_CONFIRMED", "SYSTEM", "Order #" + orderId));
         emailService.sendOrderConfirmation(savedOrder);
-
         return savedOrder;
     }
 
@@ -157,7 +167,7 @@ public class OrderService {
         Order order = orderRepository.findById(orderId).orElseThrow();
         BigDecimal potentialTotalRefund = order.getRefundedAmount().add(amount);
         if (potentialTotalRefund.compareTo(order.getTotalAmount()) > 0) {
-            throw new RuntimeException("Refund Policy Violation: Total refund cannot exceed order amount.");
+            throw new RuntimeException("Refund Policy Violation.");
         }
         order.setRefundedAmount(potentialTotalRefund);
         order.setStatus(OrderStatus.REFUNDED);
