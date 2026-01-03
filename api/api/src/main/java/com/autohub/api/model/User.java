@@ -33,8 +33,10 @@ public class User implements UserDetails {
     private String resetToken;
     private LocalDateTime resetTokenExpiry;
 
-    // --- MFA FIELDS ---
+    // --- MFA FIELDS (FIXED: Default value for existing PostgreSQL records) ---
+    @Column(nullable = false, columnDefinition = "boolean default false")
     private boolean mfaEnabled = false;
+
     private String mfaSecret;
 
     @ManyToOne(fetch = FetchType.EAGER)
@@ -58,7 +60,7 @@ public class User implements UserDetails {
     public boolean isMfaEnabled() { return mfaEnabled; }
     public String getMfaSecret() { return mfaSecret; }
     public Role getRole() { return role; }
-    public Cart getCart() { return cart; } // FIXED: Added missing getter
+    public Cart getCart() { return cart; }
     public String getResetToken() { return resetToken; }
     public LocalDateTime getResetTokenExpiry() { return resetTokenExpiry; }
 
@@ -74,7 +76,7 @@ public class User implements UserDetails {
     public void setMfaEnabled(boolean mfaEnabled) { this.mfaEnabled = mfaEnabled; }
     public void setMfaSecret(String mfaSecret) { this.mfaSecret = mfaSecret; }
     public void setRole(Role role) { this.role = role; }
-    public void setCart(Cart cart) { this.cart = cart; } // FIXED: Added missing setter
+    public void setCart(Cart cart) { this.cart = cart; }
     public void setResetToken(String resetToken) { this.resetToken = resetToken; }
     public void setResetTokenExpiry(LocalDateTime resetTokenExpiry) { this.resetTokenExpiry = resetTokenExpiry; }
 
