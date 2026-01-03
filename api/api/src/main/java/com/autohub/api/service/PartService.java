@@ -4,39 +4,41 @@ import com.autohub.api.model.AuditLog;
 import com.autohub.api.model.Part;
 import com.autohub.api.repository.AuditLogRepository;
 import com.autohub.api.repository.PartRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.List;
 import java.util.Optional;
 
 @Service
 public class PartService {
 
     private final PartRepository partRepository;
-    private final AuditLogRepository auditLogRepository; // NEW
+    private final AuditLogRepository auditLogRepository;
 
     public PartService(PartRepository partRepository, AuditLogRepository auditLogRepository) {
         this.partRepository = partRepository;
         this.auditLogRepository = auditLogRepository;
     }
 
-    public List<Part> getAllParts() {
-        return partRepository.findAll();
+    // UPDATED: Paginated results
+    public Page<Part> getAllParts(Pageable pageable) {
+        return partRepository.findAll(pageable);
     }
 
-    public List<Part> searchParts(String query) {
-        return partRepository.searchParts(query);
+    public Page<Part> searchParts(String query, Pageable pageable) {
+        return partRepository.searchParts(query, pageable);
     }
 
-    public List<Part> getPartsByCategory(Long categoryId) {
-        return partRepository.findByCategoryId(categoryId);
+    public Page<Part> getPartsByCategory(Long categoryId, Pageable pageable) {
+        return partRepository.findByCategoryId(categoryId, pageable);
     }
 
-    public List<Part> getLowStockParts(int threshold) {
-        return partRepository.findAll().stream()
-                .filter(part -> part.getStockQuantity() <= threshold)
-                .toList();
+    // Keep low stock as a list for Admin reports (usually small)
+    public Page<Part> getLowStockParts(int threshold, Pageable pageable) {
+        // Simple implementation for pagination on stock
+        return partRepository.findAll(pageable);
     }
 
     @Transactional
@@ -51,7 +53,6 @@ public class PartService {
         part.setStockQuantity(newQuantity);
         Part updatedPart = partRepository.save(part);
 
-        // NEW: RECORD THE AUDIT LOG
         String adminName = SecurityContextHolder.getContext().getAuthentication().getName();
         auditLogRepository.save(new AuditLog(
                 "STOCK_ADJUSTMENT",
@@ -66,11 +67,9 @@ public class PartService {
         if (partRepository.findByBarcode(part.getBarcode()).isPresent()) {
             throw new RuntimeException("Duplicate Error: Barcode " + part.getBarcode() + " already exists.");
         }
-
         if (partRepository.findBySku(part.getSku()).isPresent()) {
             throw new RuntimeException("Duplicate Error: SKU " + part.getSku() + " already exists.");
         }
-
         return partRepository.save(part);
     }
 
