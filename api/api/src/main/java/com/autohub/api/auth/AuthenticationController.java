@@ -40,7 +40,6 @@ public class AuthenticationController {
 
     @PostMapping("/login")
     public ResponseEntity<?> authenticate(@RequestBody RegisterRequest request, HttpServletRequest httpRequest) {
-        // 1. Rate Limiting Check
         String clientIp = httpRequest.getRemoteAddr();
         Bucket bucket = rateLimitService.resolveBucket(clientIp);
 
@@ -49,16 +48,13 @@ public class AuthenticationController {
                     .body("Too many login attempts. Please try again in a minute.");
         }
 
-        // 2. Initial Password Check
         User user = userRepository.findByUsername(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // We assume service.verifyPassword checks the encoded password
         if (!service.isValidCredentials(request)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
         }
 
-        // 3. MFA Challenge Check
         if (user.isMfaEnabled()) {
             return ResponseEntity.ok(Map.of(
                     "mfaRequired", true,
@@ -67,7 +63,6 @@ public class AuthenticationController {
             ));
         }
 
-        // 4. Standard JWT Return if no MFA
         return ResponseEntity.ok(service.authenticate(request));
     }
 
@@ -82,11 +77,22 @@ public class AuthenticationController {
         boolean isCodeValid = mfaService.verifyCode(user.getMfaSecret(), code);
 
         if (isCodeValid) {
-            // Generate full JWT response after successful MFA
             return ResponseEntity.ok(service.generateTokenForUser(user));
         } else {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid MFA code");
         }
+    }
+
+    // HARDENING: Token Revocation / Logout
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            service.blacklistToken(token); // Logic to store in Redis/DB Blacklist
+            return ResponseEntity.ok("Successfully logged out and token invalidated.");
+        }
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid logout request.");
     }
 
     @PostMapping("/setup-mfa")

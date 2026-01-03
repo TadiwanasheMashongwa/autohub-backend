@@ -65,7 +65,6 @@ public class OrderService {
             orderItems.add(oi);
         }
 
-        // Create Order as PENDING_PAYMENT
         Order order = createOrderWithCoupon(user, orderItems, cart.getAppliedCoupon());
         cart.getItems().clear();
         cart.setAppliedCoupon(null);
@@ -87,6 +86,7 @@ public class OrderService {
         order.setUser(user);
         BigDecimal subtotal = BigDecimal.ZERO;
 
+        // HARDENING: Price re-verification against DB
         for (OrderItem item : items) {
             Part part = partRepository.findById(item.getPart().getId())
                     .orElseThrow(() -> new RuntimeException("Part not found"));
@@ -109,12 +109,11 @@ public class OrderService {
         order.setItems(items);
         order.setDiscountAmount(discount);
         order.setTotalAmount(subtotal.subtract(discount));
-        order.setStatus(OrderStatus.PENDING); // Awaiting Payment confirmation
+        order.setStatus(OrderStatus.PENDING);
 
         return orderRepository.save(order);
     }
 
-    // --- FINANCIAL INTEGRITY: CONFIRM PAYMENT ---
     @Transactional
     public Order confirmPayment(Long orderId, String paymentId) {
         Order order = orderRepository.findById(orderId)
@@ -124,11 +123,10 @@ public class OrderService {
             throw new RuntimeException("Order is not in a state to be paid.");
         }
 
-        // Deduct Stock NOW that money is confirmed
         for (OrderItem item : order.getItems()) {
-            Part part = item.getPart();
+            Part part = partRepository.findById(item.getPart().getId()).orElseThrow();
             if (part.getStockQuantity() < item.getQuantity()) {
-                throw new RuntimeException("Stock sold out during payment process for: " + part.getName());
+                throw new RuntimeException("Stock sold out during payment for: " + part.getName());
             }
             part.setStockQuantity(part.getStockQuantity() - item.getQuantity());
             partRepository.save(part);
@@ -139,7 +137,6 @@ public class OrderService {
         order.setStatus(OrderStatus.COMPLETED);
         Order savedOrder = orderRepository.save(order);
 
-        // Audit & Notify
         auditLogRepository.save(new AuditLog("PAYMENT_CONFIRMED", "SYSTEM", "Order #" + orderId + " paid via " + paymentId));
         emailService.sendOrderConfirmation(savedOrder);
 
@@ -159,8 +156,16 @@ public class OrderService {
     @Transactional
     public Order processRefund(Long orderId, BigDecimal amount, boolean restockItems) {
         Order order = orderRepository.findById(orderId).orElseThrow();
-        order.setRefundedAmount(amount);
+
+        // HARDENING: Over-refund Protection
+        BigDecimal potentialTotalRefund = order.getRefundedAmount().add(amount);
+        if (potentialTotalRefund.compareTo(order.getTotalAmount()) > 1) {
+            throw new RuntimeException("Refund Policy Violation: Total refund cannot exceed order amount.");
+        }
+
+        order.setRefundedAmount(potentialTotalRefund);
         order.setStatus(OrderStatus.REFUNDED);
+
         if (restockItems) {
             for (OrderItem item : order.getItems()) {
                 Part part = item.getPart();
@@ -168,6 +173,8 @@ public class OrderService {
                 partRepository.save(part);
             }
         }
+
+        auditLogRepository.save(new AuditLog("ORDER_REFUND", "ADMIN", "Order #" + orderId + " refunded: " + amount));
         return orderRepository.save(order);
     }
 
