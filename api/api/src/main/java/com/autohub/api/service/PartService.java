@@ -1,7 +1,10 @@
 package com.autohub.api.service;
 
+import com.autohub.api.model.AuditLog;
 import com.autohub.api.model.Part;
+import com.autohub.api.repository.AuditLogRepository;
 import com.autohub.api.repository.PartRepository;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
@@ -11,9 +14,11 @@ import java.util.Optional;
 public class PartService {
 
     private final PartRepository partRepository;
+    private final AuditLogRepository auditLogRepository; // NEW
 
-    public PartService(PartRepository partRepository) {
+    public PartService(PartRepository partRepository, AuditLogRepository auditLogRepository) {
         this.partRepository = partRepository;
+        this.auditLogRepository = auditLogRepository;
     }
 
     public List<Part> getAllParts() {
@@ -34,15 +39,27 @@ public class PartService {
                 .toList();
     }
 
-    // NEW: Manual stock adjustment (Admin Override)
     @Transactional
     public Part updateStock(Long partId, Integer newQuantity) {
         Part part = getPartById(partId);
+        int oldQuantity = part.getStockQuantity();
+
         if (newQuantity < 0) {
             throw new RuntimeException("Stock quantity cannot be negative");
         }
+
         part.setStockQuantity(newQuantity);
-        return partRepository.save(part);
+        Part updatedPart = partRepository.save(part);
+
+        // NEW: RECORD THE AUDIT LOG
+        String adminName = SecurityContextHolder.getContext().getAuthentication().getName();
+        auditLogRepository.save(new AuditLog(
+                "STOCK_ADJUSTMENT",
+                adminName,
+                String.format("Part: %s, SKU: %s, Adjusted from %d to %d", part.getName(), part.getSku(), oldQuantity, newQuantity)
+        ));
+
+        return updatedPart;
     }
 
     public Part savePart(Part part) {

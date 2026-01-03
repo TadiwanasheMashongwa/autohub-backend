@@ -46,11 +46,14 @@ public class Part {
   @JoinColumn(name = "category_id")
   private Category category;
 
-  // NEW: Reviews Relationship
   @OneToMany(mappedBy = "part", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<Review> reviews = new ArrayList<>();
 
   private Double averageRating = 0.0;
+
+  // NEW: OPTIMISTIC LOCKING VERSION
+  @Version
+  private Long version;
 
   public Part() {}
 
@@ -79,10 +82,11 @@ public class Part {
   public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
   public Category getCategory() { return category; }
   public void setCategory(Category category) { this.category = category; }
-
-  // NEW GETTERS/SETTERS
   public List<Review> getReviews() { return reviews; }
   public void setReviews(List<Review> reviews) { this.reviews = reviews; }
   public Double getAverageRating() { return averageRating; }
   public void setAverageRating(Double averageRating) { this.averageRating = averageRating; }
+
+  // NEW VERSION GETTER
+  public Long getVersion() { return version; }
 }
