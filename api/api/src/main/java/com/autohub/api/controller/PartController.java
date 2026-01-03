@@ -2,7 +2,6 @@ package com.autohub.api.controller;
 
 import com.autohub.api.model.Part;
 import com.autohub.api.service.PartService;
-
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -10,25 +9,23 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-
 @RestController
-@RequestMapping("/api/parts")
+@RequestMapping("/api/v1/parts") // Added Versioning
 public class PartController {
     private final PartService service;
 
     public PartController(PartService service) {
         this.service = service;
     }
+
     @GetMapping
-    @Cacheable(value = "parts", key = "#pageable.pageNumber") // CACHED
+    // FIX: Using a complex key to prevent page-size collisions
+    @Cacheable(value = "parts", key = "{#pageable.pageNumber, #pageable.pageSize}")
     public ResponseEntity<Page<Part>> getAllParts(Pageable pageable) {
         return ResponseEntity.ok(service.getAllParts(pageable));
     }
 
-    @GetMapping
-    public ResponseEntity<Page<Part>> getAllParts(Pageable pageable) {
-        return ResponseEntity.ok(service.getAllParts(pageable));
-    }
+    // REMOVED: Duplicate getAllParts method was here
 
     @GetMapping("/search")
     public ResponseEntity<Page<Part>> search(@RequestParam String query, Pageable pageable) {
