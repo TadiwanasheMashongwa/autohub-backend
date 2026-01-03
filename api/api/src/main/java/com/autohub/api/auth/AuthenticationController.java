@@ -34,6 +34,8 @@ public class AuthenticationController {
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
+        // Log for debugging (remove in production)
+        System.out.println("Registering user: " + request.getUsername());
         return ResponseEntity.ok(service.register(request));
     }
 
@@ -47,11 +49,17 @@ public class AuthenticationController {
                     .body("Too many login attempts. Please try again in a minute.");
         }
 
-        User user = userRepository.findByUsername(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        // FIXED: Using username from the DTO to match Registration/Login consistency
+        String loginId = request.getUsername();
+        if (loginId == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Username/Email is required");
+        }
 
-        if (!service.isValidCredentials(request)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
+        User user = userRepository.findByUsername(loginId)
+                .orElse(null);
+
+        if (user == null || !service.isValidCredentials(request)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid username or password");
         }
 
         if (user.isMfaEnabled()) {
@@ -91,20 +99,5 @@ public class AuthenticationController {
             return ResponseEntity.ok("Successfully logged out.");
         }
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid logout request.");
-    }
-
-    @PostMapping("/setup-mfa")
-    public ResponseEntity<?> setupMfa(@RequestParam String username) {
-        User user = userRepository.findByUsername(username).orElseThrow();
-        String secret = mfaService.generateSecret();
-        user.setMfaSecret(secret);
-        userRepository.save(user);
-
-        String qrCodeUri = mfaService.generateQrCodeUri(secret, user.getUsername());
-        return ResponseEntity.ok(Map.of(
-                "qrCode", qrCodeUri,
-                "secret", secret,
-                "instructions", "Scan this QR code with Google Authenticator or Authy"
-        ));
     }
 }
