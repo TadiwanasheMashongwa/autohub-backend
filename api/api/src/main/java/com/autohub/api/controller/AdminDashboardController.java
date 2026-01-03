@@ -29,6 +29,15 @@ public class AdminDashboardController {
         this.partService = partService;
         this.userRepository = userRepository;
     }
+
+    @PostMapping("/orders/{orderId}/ship")
+    public ResponseEntity<Order> shipOrder(
+            @PathVariable Long orderId,
+            @RequestParam String courierName,
+            @RequestParam String trackingNumber) {
+        return ResponseEntity.ok(orderService.shipOrder(orderId, courierName, trackingNumber));
+    }
+
     @PostMapping("/orders/{orderId}/refund")
     public ResponseEntity<Order> issueRefund(
             @PathVariable Long orderId,
@@ -36,6 +45,7 @@ public class AdminDashboardController {
             @RequestParam boolean restock) {
         return ResponseEntity.ok(orderService.processRefund(orderId, amount, restock));
     }
+
     @GetMapping("/stats")
     public ResponseEntity<Map<String, Object>> getDashboardStats() {
         Map<String, Object> stats = new HashMap<>();
@@ -46,7 +56,6 @@ public class AdminDashboardController {
         return ResponseEntity.ok(stats);
     }
 
-    // NEW: Customer Management Endpoint
     @GetMapping("/customers")
     public ResponseEntity<List<User>> getAllCustomers() {
         return ResponseEntity.ok(userRepository.findAllCustomers());
@@ -57,7 +66,6 @@ public class AdminDashboardController {
         return ResponseEntity.ok(partService.getLowStockParts(5));
     }
 
-    // NEW: Manual Inventory Adjustment Endpoint
     @PatchMapping("/inventory/{partId}/stock")
     public ResponseEntity<Part> adjustStock(@PathVariable Long partId, @RequestParam Integer quantity) {
         return ResponseEntity.ok(partService.updateStock(partId, quantity));

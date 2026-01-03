@@ -25,10 +25,14 @@ public class Order {
     private BigDecimal totalAmount;
     private BigDecimal discountAmount = BigDecimal.ZERO;
 
-    // NEW: FINANCIAL & LOGISTICS TRACKING
     private BigDecimal refundedAmount = BigDecimal.ZERO;
     private String returnReason;
     private String couponCode;
+
+    // --- NEW LOGISTICS FIELDS ---
+    private String trackingNumber;
+    private String courierName;
+    private LocalDateTime shippedDate;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "order_id")
@@ -50,6 +54,9 @@ public class Order {
     public String getCouponCode() { return couponCode; }
     public BigDecimal getRefundedAmount() { return refundedAmount; }
     public String getReturnReason() { return returnReason; }
+    public String getTrackingNumber() { return trackingNumber; }
+    public String getCourierName() { return courierName; }
+    public LocalDateTime getShippedDate() { return shippedDate; }
 
     // --- SETTERS ---
     public void setId(Long id) { this.id = id; }
@@ -62,4 +69,7 @@ public class Order {
     public void setCouponCode(String couponCode) { this.couponCode = couponCode; }
     public void setRefundedAmount(BigDecimal refundedAmount) { this.refundedAmount = refundedAmount; }
     public void setReturnReason(String returnReason) { this.returnReason = returnReason; }
+    public void setTrackingNumber(String trackingNumber) { this.trackingNumber = trackingNumber; }
+    public void setCourierName(String courierName) { this.courierName = courierName; }
+    public void setShippedDate(LocalDateTime shippedDate) { this.shippedDate = shippedDate; }
 }
