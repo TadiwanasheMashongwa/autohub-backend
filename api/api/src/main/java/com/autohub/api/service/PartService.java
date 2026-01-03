@@ -5,11 +5,15 @@ import com.autohub.api.model.Part;
 import com.autohub.api.repository.AuditLogRepository;
 import com.autohub.api.repository.PartRepository;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class PartService {
@@ -22,7 +26,6 @@ public class PartService {
         this.auditLogRepository = auditLogRepository;
     }
 
-    // UPDATED: Paginated results
     public Page<Part> getAllParts(Pageable pageable) {
         return partRepository.findAll(pageable);
     }
@@ -35,10 +38,16 @@ public class PartService {
         return partRepository.findByCategoryId(categoryId, pageable);
     }
 
-    // Keep low stock as a list for Admin reports (usually small)
+    // Paginated version for full reports
     public Page<Part> getLowStockParts(int threshold, Pageable pageable) {
-        // Simple implementation for pagination on stock
-        return partRepository.findAll(pageable);
+        return partRepository.findByStockQuantityLessThan(threshold, pageable);
+    }
+
+    // NEW Helper: Non-paginated list for quick dashboard stats
+    public List<Part> getLowStockPartsList(int threshold) {
+        return partRepository.findAll().stream()
+                .filter(p -> p.getStockQuantity() < threshold)
+                .collect(Collectors.toList());
     }
 
     @Transactional

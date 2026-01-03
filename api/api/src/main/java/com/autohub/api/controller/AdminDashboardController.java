@@ -6,6 +6,7 @@ import com.autohub.api.model.User;
 import com.autohub.api.repository.UserRepository;
 import com.autohub.api.service.OrderService;
 import com.autohub.api.service.PartService;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -52,7 +53,10 @@ public class AdminDashboardController {
         stats.put("totalRevenue", orderService.calculateTotalRevenue());
         stats.put("totalOrders", orderService.getTotalOrderCount());
         stats.put("totalCustomers", userRepository.countByRoleName("ROLE_CUSTOMER"));
-        stats.put("lowStockCount", partService.getLowStockParts(5).size());
+
+        // FIXED: Uses the new List-based helper
+        stats.put("lowStockCount", partService.getLowStockPartsList(5).size());
+
         return ResponseEntity.ok(stats);
     }
 
@@ -63,7 +67,8 @@ public class AdminDashboardController {
 
     @GetMapping("/low-stock")
     public ResponseEntity<List<Part>> getLowStockReport() {
-        return ResponseEntity.ok(partService.getLowStockParts(5));
+        // FIXED: Uses the new List-based helper
+        return ResponseEntity.ok(partService.getLowStockPartsList(5));
     }
 
     @PatchMapping("/inventory/{partId}/stock")
