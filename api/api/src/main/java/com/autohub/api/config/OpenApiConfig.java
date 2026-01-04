@@ -11,8 +11,10 @@ import org.springframework.context.annotation.Configuration;
 @OpenAPIDefinition(
         info = @Info(
                 title = "AutoHub Spare Parts API",
-                version = "1.0",
-                description = "Complete Backend API for AutoHub E-commerce Platform"
+                version = "2026.1.6",
+                description = "Complete Backend API for AutoHub. Features include MFA authentication, " +
+                        "a multi-step Vehicle Discovery Engine (Make/Model/Year), and " +
+                        "comprehensive Admin CRUD for inventory management."
         ),
         security = @SecurityRequirement(name = "bearerAuth")
 )
@@ -23,4 +25,5 @@ import org.springframework.context.annotation.Configuration;
         bearerFormat = "JWT"
 )
 public class OpenApiConfig {
+        // This class primarily uses annotations to configure the OpenAPI (Swagger) definition.
 }
