@@ -46,11 +46,10 @@ public class Part {
 
   @ManyToOne
   @JoinColumn(name = "category_id")
-  // We keep this visible but manage the link in Category
   private Category category;
 
   @OneToMany(mappedBy = "part", cascade = CascadeType.ALL, orphanRemoval = true)
-  @JsonManagedReference // Part is the "owner" of the reviews
+  @JsonManagedReference // Part "owns" the reviews in the JSON tree
   private List<Review> reviews = new ArrayList<>();
 
   @ManyToMany
@@ -59,7 +58,7 @@ public class Part {
           joinColumns = @JoinColumn(name = "part_id"),
           inverseJoinColumns = @JoinColumn(name = "vehicle_id")
   )
-  @JsonIgnore // Vehicles are heavy; we ignore them in the main Part spec to prevent loops
+  @JsonIgnore
   private List<Vehicle> compatibleVehicles = new ArrayList<>();
 
   private Double averageRating = 0.0;

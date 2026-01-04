@@ -19,7 +19,7 @@ public class Review {
 
     @ManyToOne
     @JoinColumn(name = "part_id")
-    @JsonBackReference // Correct annotation to prevent infinite recursion
+    @JsonBackReference // Review "points back" to Part to stop infinite looping
     private Part part;
 
     @Min(1) @Max(5)
@@ -32,7 +32,6 @@ public class Review {
 
     public Review() { this.createdAt = LocalDateTime.now(); }
 
-    // --- GETTERS ---
     public Long getId() { return id; }
     public User getUser() { return user; }
     public Part getPart() { return part; }
@@ -40,7 +39,6 @@ public class Review {
     public String getComment() { return comment; }
     public LocalDateTime getCreatedAt() { return createdAt; }
 
-    // --- SETTERS ---
     public void setId(Long id) { this.id = id; }
     public void setUser(User user) { this.user = user; }
     public void setPart(Part part) { this.part = part; }
