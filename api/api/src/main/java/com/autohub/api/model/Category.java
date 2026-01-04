@@ -1,14 +1,13 @@
 package com.autohub.api.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
-import lombok.*;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "categories")
-@Getter @Setter
-@NoArgsConstructor
-@AllArgsConstructor
 public class Category {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -20,21 +19,21 @@ public class Category {
 
     private String description;
 
-    // MANUAL SETTERS
-    public void setId(Long id) { this.id = id; }
+    @OneToMany(mappedBy = "category")
+    @JsonIgnore // CRITICAL: Prevents Category -> Part -> Category loop in Swagger
+    private List<Part> parts = new ArrayList<>();
 
-    public void setName(String name) {
-        this.name = name;
-    }
+    public Category() {}
 
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    // MANUAL GETTERS - Fixed to include description
+    // --- GETTERS ---
     public Long getId() { return id; }
-
     public String getName() { return name; }
-
     public String getDescription() { return description; }
+    public List<Part> getParts() { return parts; }
+
+    // --- SETTERS ---
+    public void setId(Long id) { this.id = id; }
+    public void setName(String name) { this.name = name; }
+    public void setDescription(String description) { this.description = description; }
+    public void setParts(List<Part> parts) { this.parts = parts; }
 }

@@ -1,5 +1,6 @@
 package com.autohub.api.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
@@ -47,6 +48,7 @@ public class Part {
   private Category category;
 
   @OneToMany(mappedBy = "part", cascade = CascadeType.ALL, orphanRemoval = true)
+  @JsonIgnore // Prevent Swagger loop: Part -> Review -> User -> Cart...
   private List<Review> reviews = new ArrayList<>();
 
   @ManyToMany
@@ -55,6 +57,7 @@ public class Part {
           joinColumns = @JoinColumn(name = "part_id"),
           inverseJoinColumns = @JoinColumn(name = "vehicle_id")
   )
+  @JsonIgnore // Prevent heavy recursive scanning of vehicles
   private List<Vehicle> compatibleVehicles = new ArrayList<>();
 
   private Double averageRating = 0.0;
@@ -64,7 +67,7 @@ public class Part {
 
   public Part() {}
 
-  // --- MANUAL GETTERS ---
+  // --- GETTERS ---
   public Long getId() { return id; }
   public String getName() { return name; }
   public String getSku() { return sku; }
@@ -82,7 +85,7 @@ public class Part {
   public List<Vehicle> getCompatibleVehicles() { return compatibleVehicles; }
   public Long getVersion() { return version; }
 
-  // --- MANUAL SETTERS ---
+  // --- SETTERS ---
   public void setId(Long id) { this.id = id; }
   public void setName(String name) { this.name = name; }
   public void setSku(String sku) { this.sku = sku; }
@@ -98,5 +101,5 @@ public class Part {
   public void setReviews(List<Review> reviews) { this.reviews = reviews; }
   public void setAverageRating(Double averageRating) { this.averageRating = averageRating; }
   public void setCompatibleVehicles(List<Vehicle> compatibleVehicles) { this.compatibleVehicles = compatibleVehicles; }
-  public void setVersion(Long version) { this.version = version; } // Added missing manual setter
+  public void setVersion(Long version) { this.version = version; }
 }
