@@ -1,15 +1,76 @@
 package com.autohub.api.controller;
 
+import com.autohub.api.model.Order;
+import com.autohub.api.model.Part;
+import com.autohub.api.model.User;
+import com.autohub.api.repository.UserRepository;
+import com.autohub.api.service.OrderService;
+import com.autohub.api.service.PartService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/admin")
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminController {
 
+    private final OrderService orderService;
+    private final PartService partService;
+    private final UserRepository userRepository;
+
+    public AdminController(OrderService orderService, PartService partService, UserRepository userRepository) {
+        this.orderService = orderService;
+        this.partService = partService;
+        this.userRepository = userRepository;
+    }
+
+    // --- DASHBOARD & STATS ---
     @GetMapping("/stats")
-    public String getDashboardStats() {
-        return "Total Sales: $5000 | New Orders: 12";
+    public ResponseEntity<Map<String, Object>> getDashboardStats() {
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("totalRevenue", orderService.calculateTotalRevenue());
+        stats.put("totalOrders", orderService.getTotalOrderCount());
+        stats.put("totalCustomers", userRepository.countByRoleName("ROLE_CUSTOMER"));
+        stats.put("lowStockCount", partService.getLowStockPartsList(5).size());
+        return ResponseEntity.ok(stats);
+    }
+
+    // --- ORDER FULFILLMENT ---
+    @PostMapping("/orders/{orderId}/ship")
+    public ResponseEntity<Order> shipOrder(
+            @PathVariable Long orderId,
+            @RequestParam String courierName,
+            @RequestParam String trackingNumber) {
+        return ResponseEntity.ok(orderService.shipOrder(orderId, courierName, trackingNumber));
+    }
+
+    @PostMapping("/orders/{orderId}/refund")
+    public ResponseEntity<Order> issueRefund(
+            @PathVariable Long orderId,
+            @RequestParam BigDecimal amount,
+            @RequestParam boolean restock) {
+        return ResponseEntity.ok(orderService.processRefund(orderId, amount, restock));
+    }
+
+    // --- INVENTORY & CUSTOMERS ---
+    @GetMapping("/low-stock")
+    public ResponseEntity<List<Part>> getLowStockReport() {
+        return ResponseEntity.ok(partService.getLowStockPartsList(5));
+    }
+
+    @PatchMapping("/inventory/{partId}/stock")
+    public ResponseEntity<Part> adjustStock(@PathVariable Long partId, @RequestParam Integer quantity) {
+        return ResponseEntity.ok(partService.updateStock(partId, quantity));
+    }
+
+    @GetMapping("/customers")
+    public ResponseEntity<List<User>> getAllCustomers() {
+        return ResponseEntity.ok(userRepository.findAllCustomers());
     }
 }

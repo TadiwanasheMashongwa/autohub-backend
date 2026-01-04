@@ -16,7 +16,7 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity // Required for @PreAuthorize to work on your Admin controllers
+@EnableMethodSecurity
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
@@ -40,7 +40,6 @@ public class SecurityConfig {
                     return corsConfiguration;
                 }))
                 .authorizeHttpRequests(auth -> auth
-                        // 1. Fully Public Routes
                         .requestMatchers(
                                 "/api/v1/auth/**",
                                 "/api/v1/health",
@@ -48,13 +47,9 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html"
                         ).permitAll()
-
-                        // 2. Public Read-Only Access (Browsing the shop)
                         .requestMatchers(HttpMethod.GET, "/api/v1/parts/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/vehicles/**").permitAll()
-
-                        // 3. Everything else requires Authentication
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
