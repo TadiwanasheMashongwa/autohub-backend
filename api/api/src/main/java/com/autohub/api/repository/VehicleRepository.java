@@ -2,10 +2,17 @@ package com.autohub.api.repository;
 
 import com.autohub.api.model.Vehicle;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import java.util.List;
 
 @Repository
 public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
-    // This interface is empty because JpaRepository provides
-    // all the standard CRUD (Create, Read, Update, Delete) methods for us.
+
+    @Query("SELECT DISTINCT v.make FROM Vehicle v")
+    List<String> findDistinctMakes();
+
+    @Query("SELECT DISTINCT v.model FROM Vehicle v WHERE v.make = :make")
+    List<String> findDistinctModelsByMake(@Param("make") String make);
 }
