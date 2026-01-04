@@ -49,7 +49,6 @@ public class Part {
   @OneToMany(mappedBy = "part", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<Review> reviews = new ArrayList<>();
 
-  // NEW: Added Many-to-Many relationship for Vehicle Compatibility
   @ManyToMany
   @JoinTable(
           name = "part_vehicle_compatibility",
@@ -65,36 +64,39 @@ public class Part {
 
   public Part() {}
 
-  // --- GETTERS & SETTERS ---
+  // --- MANUAL GETTERS ---
   public Long getId() { return id; }
-  public void setId(Long id) { this.id = id; }
   public String getName() { return name; }
-  public void setName(String name) { this.name = name; }
   public String getSku() { return sku; }
-  public void setSku(String sku) { this.sku = sku; }
   public String getBarcode() { return barcode; }
-  public void setBarcode(String barcode) { this.barcode = barcode; }
   public String getOemNumber() { return oemNumber; }
-  public void setOemNumber(String oemNumber) { this.oemNumber = oemNumber; }
   public String getDescription() { return description; }
-  public void setDescription(String description) { this.description = description; }
   public BigDecimal getPrice() { return price; }
-  public void setPrice(BigDecimal price) { this.price = price; }
   public Integer getStockQuantity() { return stockQuantity; }
-  public void setStockQuantity(Integer stockQuantity) { this.stockQuantity = stockQuantity; }
   public String getBrand() { return brand; }
-  public void setBrand(String brand) { this.brand = brand; }
   public String getCondition() { return condition; }
-  public void setCondition(String condition) { this.condition = condition; }
   public String getImageUrl() { return imageUrl; }
-  public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
   public Category getCategory() { return category; }
-  public void setCategory(Category category) { this.category = category; }
   public List<Review> getReviews() { return reviews; }
-  public void setReviews(List<Review> reviews) { this.reviews = reviews; }
   public Double getAverageRating() { return averageRating; }
-  public void setAverageRating(Double averageRating) { this.averageRating = averageRating; }
   public List<Vehicle> getCompatibleVehicles() { return compatibleVehicles; }
-  public void setCompatibleVehicles(List<Vehicle> compatibleVehicles) { this.compatibleVehicles = compatibleVehicles; }
   public Long getVersion() { return version; }
+
+  // --- MANUAL SETTERS ---
+  public void setId(Long id) { this.id = id; }
+  public void setName(String name) { this.name = name; }
+  public void setSku(String sku) { this.sku = sku; }
+  public void setBarcode(String barcode) { this.barcode = barcode; }
+  public void setOemNumber(String oemNumber) { this.oemNumber = oemNumber; }
+  public void setDescription(String description) { this.description = description; }
+  public void setPrice(BigDecimal price) { this.price = price; }
+  public void setStockQuantity(Integer stockQuantity) { this.stockQuantity = stockQuantity; }
+  public void setBrand(String brand) { this.brand = brand; }
+  public void setCondition(String condition) { this.condition = condition; }
+  public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+  public void setCategory(Category category) { this.category = category; }
+  public void setReviews(List<Review> reviews) { this.reviews = reviews; }
+  public void setAverageRating(Double averageRating) { this.averageRating = averageRating; }
+  public void setCompatibleVehicles(List<Vehicle> compatibleVehicles) { this.compatibleVehicles = compatibleVehicles; }
+  public void setVersion(Long version) { this.version = version; } // Added missing manual setter
 }
