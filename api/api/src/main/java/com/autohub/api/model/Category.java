@@ -20,18 +20,16 @@ public class Category {
     private String description;
 
     @OneToMany(mappedBy = "category")
-    @JsonIgnore // CRITICAL: Prevents Category -> Part -> Category loop in Swagger
+    @JsonIgnore // Prevent Category -> Part -> Category loop
     private List<Part> parts = new ArrayList<>();
 
     public Category() {}
 
-    // --- GETTERS ---
     public Long getId() { return id; }
     public String getName() { return name; }
     public String getDescription() { return description; }
     public List<Part> getParts() { return parts; }
 
-    // --- SETTERS ---
     public void setId(Long id) { this.id = id; }
     public void setName(String name) { this.name = name; }
     public void setDescription(String description) { this.description = description; }

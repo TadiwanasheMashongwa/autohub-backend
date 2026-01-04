@@ -1,5 +1,6 @@
 package com.autohub.api.model;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
@@ -45,10 +46,11 @@ public class Part {
 
   @ManyToOne
   @JoinColumn(name = "category_id")
+  // We keep this visible but manage the link in Category
   private Category category;
 
   @OneToMany(mappedBy = "part", cascade = CascadeType.ALL, orphanRemoval = true)
-  @JsonIgnore // Prevent Swagger loop: Part -> Review -> User -> Cart...
+  @JsonManagedReference // Part is the "owner" of the reviews
   private List<Review> reviews = new ArrayList<>();
 
   @ManyToMany
@@ -57,7 +59,7 @@ public class Part {
           joinColumns = @JoinColumn(name = "part_id"),
           inverseJoinColumns = @JoinColumn(name = "vehicle_id")
   )
-  @JsonIgnore // Prevent heavy recursive scanning of vehicles
+  @JsonIgnore // Vehicles are heavy; we ignore them in the main Part spec to prevent loops
   private List<Vehicle> compatibleVehicles = new ArrayList<>();
 
   private Double averageRating = 0.0;
