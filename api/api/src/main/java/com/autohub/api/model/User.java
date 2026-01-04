@@ -1,5 +1,6 @@
 package com.autohub.api.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -19,6 +20,7 @@ public class User implements UserDetails {
     @Column(unique = true, nullable = false)
     private String username;
 
+    @JsonIgnore // Prevent password from being scanned/exposed
     @Column(nullable = false)
     private String password;
 
@@ -30,13 +32,15 @@ public class User implements UserDetails {
     @Column(columnDefinition = "TEXT")
     private String address;
 
+    @JsonIgnore
     private String resetToken;
+    @JsonIgnore
     private LocalDateTime resetTokenExpiry;
 
-    // --- MFA FIELDS (FIXED: Default value for existing PostgreSQL records) ---
     @Column(nullable = false, columnDefinition = "boolean default false")
     private boolean mfaEnabled = false;
 
+    @JsonIgnore
     private String mfaSecret;
 
     @ManyToOne(fetch = FetchType.EAGER)
@@ -44,11 +48,12 @@ public class User implements UserDetails {
     private Role role;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore // CRITICAL: Breaks loop User -> Cart -> User
     private Cart cart;
 
     public User() {}
 
-    // --- GETTERS ---
+    // --- GETTERS & SETTERS ---
     public Long getId() { return id; }
     public String getUsername() { return username; }
     public String getPassword() { return password; }
@@ -64,7 +69,6 @@ public class User implements UserDetails {
     public String getResetToken() { return resetToken; }
     public LocalDateTime getResetTokenExpiry() { return resetTokenExpiry; }
 
-    // --- SETTERS ---
     public void setId(Long id) { this.id = id; }
     public void setUsername(String username) { this.username = username; }
     public void setPassword(String password) { this.password = password; }
@@ -80,12 +84,15 @@ public class User implements UserDetails {
     public void setResetToken(String resetToken) { this.resetToken = resetToken; }
     public void setResetTokenExpiry(LocalDateTime resetTokenExpiry) { this.resetTokenExpiry = resetTokenExpiry; }
 
-    @Override public Collection<? extends GrantedAuthority> getAuthorities() {
+    // --- SECURITY OVERRIDES (FIXED FOR SWAGGER STABILITY) ---
+    @Override
+    @JsonIgnore // Swagger crashes trying to map the Authorities interface
+    public Collection<? extends GrantedAuthority> getAuthorities() {
         if (role == null) return List.of();
         return List.of(new SimpleGrantedAuthority(role.getName()));
     }
-    @Override public boolean isAccountNonExpired() { return true; }
-    @Override public boolean isAccountNonLocked() { return true; }
-    @Override public boolean isCredentialsNonExpired() { return true; }
-    @Override public boolean isEnabled() { return true; }
+    @Override @JsonIgnore public boolean isAccountNonExpired() { return true; }
+    @Override @JsonIgnore public boolean isAccountNonLocked() { return true; }
+    @Override @JsonIgnore public boolean isCredentialsNonExpired() { return true; }
+    @Override @JsonIgnore public boolean isEnabled() { return true; }
 }
