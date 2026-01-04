@@ -1,5 +1,6 @@
 package com.autohub.api.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -15,6 +16,7 @@ public class Order {
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnore // CRITICAL: Breaks the loop Order -> User -> Cart -> User
     private User user;
 
     private LocalDateTime orderDate;
