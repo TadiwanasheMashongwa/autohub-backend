@@ -19,7 +19,7 @@ public class Review {
 
     @ManyToOne
     @JoinColumn(name = "part_id")
-    @JsonBackReference // Review "points back" to Part to stop infinite looping
+    @JsonBackReference // Stops infinite recursion during JSON generation
     private Part part;
 
     @Min(1) @Max(5)
