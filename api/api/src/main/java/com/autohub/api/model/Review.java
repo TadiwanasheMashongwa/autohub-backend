@@ -32,15 +32,19 @@ public class Review {
 
     public Review() { this.createdAt = LocalDateTime.now(); }
 
-    // --- GETTERS & SETTERS ---
+    // --- GETTERS ---
     public Long getId() { return id; }
     public User getUser() { return user; }
-    public void setUser(User user) { this.user = user; }
     public Part getPart() { return part; }
-    public void setPart(Part part) { this.part = part; }
     public Integer getRating() { return rating; }
-    public void setRating(Integer rating) { this.rating = rating; }
     public String getComment() { return comment; }
-    public void setComment(String comment) { this.comment = comment; }
     public LocalDateTime getCreatedAt() { return createdAt; }
+
+    // --- SETTERS ---
+    public void setId(Long id) { this.id = id; }
+    public void setUser(User user) { this.user = user; }
+    public void setPart(Part part) { this.part = part; }
+    public void setRating(Integer rating) { this.rating = rating; }
+    public void setComment(String comment) { this.comment = comment; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

@@ -33,9 +33,8 @@ public class Order {
     private String courierName;
     private LocalDateTime shippedDate;
 
-    // --- NEW PAYMENT FIELDS ---
-    private String paymentId; // External Provider Reference
-    private String paymentStatus; // e.g., "SUCCEEDED", "FAILED", "PENDING"
+    private String paymentId;
+    private String paymentStatus;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "order_id")
