@@ -45,7 +45,9 @@ public class SecurityConfig {
                                 "/api/v1/health",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
-                                "/swagger-ui.html"
+                                "/swagger-ui.html",
+                                "/webjars/**",
+                                "/swagger-resources/**"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/parts/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
