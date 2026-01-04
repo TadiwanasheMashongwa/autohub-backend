@@ -9,10 +9,12 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // Manually mapping the Swagger UI assets from the webjar to the URL path
+        // Explicitly map the Swagger UI URL to the internal webjar resources
+        // The version 5.13.0 matches the swagger-ui jar found in your classpath
         registry.addResourceHandler("/swagger-ui/**")
                 .addResourceLocations("classpath:/META-INF/resources/webjars/swagger-ui/5.13.0/");
 
+        // Ensure general webjars (CSS/JS) are also accessible
         registry.addResourceHandler("/webjars/**")
                 .addResourceLocations("classpath:/META-INF/resources/webjars/");
     }
