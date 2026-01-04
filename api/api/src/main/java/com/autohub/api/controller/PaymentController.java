@@ -17,11 +17,16 @@ public class PaymentController {
         this.orderService = orderService;
     }
 
+    @PostMapping("/initiate/{orderId}")
+    public ResponseEntity<Map<String, String>> initiatePayment(@PathVariable Long orderId) {
+        // Logic to generate a payment intent (e.g., Paynow/Stripe integration)
+        return ResponseEntity.ok(Map.of("status", "PENDING", "orderId", orderId.toString()));
+    }
+
     @PostMapping("/confirm")
     public ResponseEntity<Order> confirmPayment(@RequestBody Map<String, String> request) {
         Long orderId = Long.parseLong(request.get("orderId"));
         String paymentId = request.get("paymentId");
-
         return ResponseEntity.ok(orderService.confirmPayment(orderId, paymentId));
     }
 }

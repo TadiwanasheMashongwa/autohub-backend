@@ -36,6 +36,12 @@ public class OrderController {
         return ResponseEntity.ok(orderService.getOrdersByUser(user));
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<Order> getOrderById(@PathVariable Long id, Authentication authentication) {
+        // Shared logic: Admin can see any order, User can only see their own
+        return ResponseEntity.ok(orderService.getOrderByIdSecurely(id, authentication.getName()));
+    }
+
     @GetMapping("/all")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<Order>> getAllOrders() {
