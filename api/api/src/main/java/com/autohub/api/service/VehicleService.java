@@ -48,4 +48,8 @@ public class VehicleService {
     public List<String> getModelsByMake(String make) {
         return vehicleRepository.findDistinctModelsByMake(make);
     }
+
+    public List<String> getYearRangesByMakeAndModel(String make, String model) {
+        return vehicleRepository.findDistinctYearRangesByMakeAndModel(make, model);
+    }
 }

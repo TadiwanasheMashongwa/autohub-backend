@@ -41,6 +41,11 @@ public class VehicleController {
         return vehicleService.getModelsByMake(make);
     }
 
+    @GetMapping("/years")
+    public List<String> getYears(@RequestParam String make, @RequestParam String model) {
+        return vehicleService.getYearRangesByMakeAndModel(make, model);
+    }
+
     // --- ADMIN PROTECTED ENDPOINTS ---
 
     @PostMapping
