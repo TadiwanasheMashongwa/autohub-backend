@@ -14,7 +14,7 @@ public class Cart {
 
     @OneToOne
     @JoinColumn(name = "user_id")
-    @JsonIgnore // Prevent loop Cart -> User -> Cart
+    @JsonIgnore // CRITICAL: Prevents Cart -> User -> Cart loop
     private User user;
 
     @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true)

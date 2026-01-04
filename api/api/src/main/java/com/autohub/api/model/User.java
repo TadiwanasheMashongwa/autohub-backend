@@ -20,7 +20,7 @@ public class User implements UserDetails {
     @Column(unique = true, nullable = false)
     private String username;
 
-    @JsonIgnore // Prevent password from being scanned/exposed
+    @JsonIgnore // CRITICAL: Never expose or scan password in Swagger
     @Column(nullable = false)
     private String password;
 
@@ -34,6 +34,7 @@ public class User implements UserDetails {
 
     @JsonIgnore
     private String resetToken;
+
     @JsonIgnore
     private LocalDateTime resetTokenExpiry;
 
@@ -48,7 +49,7 @@ public class User implements UserDetails {
     private Role role;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnore // CRITICAL: Breaks loop User -> Cart -> User
+    @JsonIgnore // CRITICAL: Breaks the loop User -> Cart -> User
     private Cart cart;
 
     public User() {}
@@ -86,7 +87,7 @@ public class User implements UserDetails {
 
     // --- SECURITY OVERRIDES (FIXED FOR SWAGGER STABILITY) ---
     @Override
-    @JsonIgnore // Swagger crashes trying to map the Authorities interface
+    @JsonIgnore // CRITICAL: Swagger crashes trying to map the Authorities interface
     public Collection<? extends GrantedAuthority> getAuthorities() {
         if (role == null) return List.of();
         return List.of(new SimpleGrantedAuthority(role.getName()));
