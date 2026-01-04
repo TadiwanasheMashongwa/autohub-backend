@@ -17,7 +17,6 @@ public class ApplicationConfig {
 
     private final UserRepository userRepository;
 
-    // Manual constructor to satisfy the "variable not initialized" error
     public ApplicationConfig(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
@@ -30,10 +29,11 @@ public class ApplicationConfig {
 
     @Bean
     public AuthenticationProvider authenticationProvider() {
-        // We pass userDetailsService() into the constructor here to satisfy your compiler
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(userDetailsService());
+        // Corrected: DaoAuthenticationProvider uses a no-args constructor
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
 
-        // Then we set the password encoder as usual
+        // Use setter methods to inject the required dependencies
+        authProvider.setUserDetailsService(userDetailsService());
         authProvider.setPasswordEncoder(passwordEncoder());
 
         return authProvider;
