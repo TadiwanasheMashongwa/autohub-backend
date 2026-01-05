@@ -8,6 +8,8 @@ import com.autohub.api.repository.PartRepository;
 import com.autohub.api.repository.ReviewRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 @Service
 public class ReviewService {
@@ -23,7 +25,7 @@ public class ReviewService {
 
     @Transactional
     public Review addReview(User user, Long partId, Integer rating, String comment) {
-        // FIXED: Passing user.getId() (Long) to match the updated Repository signature
+        // Step 1: Verified Purchaser Check (CONFIRMED WORKING)
         if (!orderRepository.hasUserPurchasedPart(user.getId(), partId)) {
             throw new RuntimeException("Only verified purchasers can review this part.");
         }
@@ -38,6 +40,8 @@ public class ReviewService {
         review.setComment(comment);
 
         Review savedReview = reviewRepository.save(review);
+
+        // Step 2: Update Average Rating with Rounding (FIX FOR TRANSACTION ERROR)
         updatePartRating(part);
 
         return savedReview;
@@ -48,7 +52,12 @@ public class ReviewService {
                 .mapToInt(Review::getRating)
                 .average()
                 .orElse(0.0);
-        part.setAverageRating(average);
+
+        // Round to 1 decimal place (e.g., 4.5) to prevent JPA commit errors
+        BigDecimal bd = BigDecimal.valueOf(average);
+        bd = bd.setScale(1, RoundingMode.HALF_UP);
+
+        part.setAverageRating(bd.doubleValue());
         partRepository.save(part);
     }
 }
