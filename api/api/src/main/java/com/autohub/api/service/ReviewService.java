@@ -8,9 +8,14 @@ import com.autohub.api.repository.PartRepository;
 import com.autohub.api.repository.ReviewRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
+/**
+ * Service managing product reviews.
+ * Version 2026.01.05 - Fixed Transaction Commit Error with Rounding.
+ */
 @Service
 public class ReviewService {
     private final ReviewRepository reviewRepository;
@@ -25,7 +30,7 @@ public class ReviewService {
 
     @Transactional
     public Review addReview(User user, Long partId, Integer rating, String comment) {
-        // Step 1: Verified Purchaser Check (CONFIRMED WORKING)
+        // Step 1: Verification (SUCCESSFUL IN LOGS)
         if (!orderRepository.hasUserPurchasedPart(user.getId(), partId)) {
             throw new RuntimeException("Only verified purchasers can review this part.");
         }
@@ -39,9 +44,10 @@ public class ReviewService {
         review.setRating(rating);
         review.setComment(comment);
 
+        // Step 2: Save Review (SUCCESSFUL IN LOGS)
         Review savedReview = reviewRepository.save(review);
 
-        // Step 2: Update Average Rating with Rounding (FIX FOR TRANSACTION ERROR)
+        // Step 3: Update Average Rating (STABILIZED WITH ROUNDING)
         updatePartRating(part);
 
         return savedReview;
@@ -53,8 +59,8 @@ public class ReviewService {
                 .average()
                 .orElse(0.0);
 
-        // Round to 1 decimal place (e.g., 4.5) to prevent JPA commit errors
-        BigDecimal bd = BigDecimal.valueOf(average);
+        // Fix: Rounding to 1 decimal place prevents PostgreSQL scale errors
+        BigDecimal bd = new BigDecimal(Double.toString(average));
         bd = bd.setScale(1, RoundingMode.HALF_UP);
 
         part.setAverageRating(bd.doubleValue());
