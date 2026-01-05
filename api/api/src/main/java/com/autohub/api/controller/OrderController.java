@@ -38,7 +38,6 @@ public class OrderController {
 
     @GetMapping("/{id}")
     public ResponseEntity<Order> getOrderById(@PathVariable Long id, Authentication authentication) {
-        // Shared logic: Admin can see any order, User can only see their own
         return ResponseEntity.ok(orderService.getOrderByIdSecurely(id, authentication.getName()));
     }
 
@@ -48,6 +47,22 @@ public class OrderController {
         return ResponseEntity.ok(orderService.getAllOrders());
     }
 
+    // --- CUSTOMER ACTION: CONFIRM RECEIPT ---
+    @PostMapping("/{id}/confirm-receipt")
+    public ResponseEntity<Order> confirmReceipt(@PathVariable Long id, Authentication authentication) {
+        // 1. Verify ownership and existence
+        Order order = orderService.getOrderByIdSecurely(id, authentication.getName());
+
+        // 2. Business Logic: Only shipped orders can be confirmed
+        if (order.getStatus() != OrderStatus.SHIPPED) {
+            throw new RuntimeException("Order must be SHIPPED before you can confirm receipt.");
+        }
+
+        // 3. Automate the completion
+        return ResponseEntity.ok(orderService.updateStatus(id, OrderStatus.COMPLETED));
+    }
+
+    // --- ADMIN ACTION: MANUAL OVERRIDE ---
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Order> updateOrderStatus(@PathVariable Long id, @RequestParam OrderStatus status) {
