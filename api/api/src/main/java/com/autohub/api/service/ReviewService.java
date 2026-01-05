@@ -23,7 +23,7 @@ public class ReviewService {
 
     @Transactional
     public Review addReview(User user, Long partId, Integer rating, String comment) {
-        // Business logic check using User ID
+        // FIXED: Passing user.getId() (Long) to match the updated Repository signature
         if (!orderRepository.hasUserPurchasedPart(user.getId(), partId)) {
             throw new RuntimeException("Only verified purchasers can review this part.");
         }
