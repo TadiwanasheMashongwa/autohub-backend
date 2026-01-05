@@ -23,8 +23,8 @@ public class ReviewService {
 
     @Transactional
     public Review addReview(User user, Long partId, Integer rating, String comment) {
-        // 1. Verify Purchase
-        if (!orderRepository.hasUserPurchasedPart(user, partId)) {
+        // Business logic check using User ID
+        if (!orderRepository.hasUserPurchasedPart(user.getId(), partId)) {
             throw new RuntimeException("Only verified purchasers can review this part.");
         }
 
@@ -38,8 +38,6 @@ public class ReviewService {
         review.setComment(comment);
 
         Review savedReview = reviewRepository.save(review);
-
-        // 2. Update Part Average Rating
         updatePartRating(part);
 
         return savedReview;
