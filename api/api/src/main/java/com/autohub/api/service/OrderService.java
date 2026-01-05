@@ -45,8 +45,6 @@ public class OrderService {
 
         // Security Check: If requester is not Admin, they must own the order
         boolean isOwner = order.getUser().getUsername().equals(username);
-        // Note: The Admin check is handled by @PreAuthorize in Controller or roles here
-        // For simplicity, we assume the controller passes the username of the requester
         return order;
     }
 
@@ -120,6 +118,8 @@ public class OrderService {
         order.setDiscountAmount(discount);
         order.setTotalAmount(subtotal.subtract(discount));
         order.setStatus(OrderStatus.PENDING);
+        // Ensure refundedAmount starts at Zero to avoid future subtrahend errors
+        order.setRefundedAmount(BigDecimal.ZERO);
 
         return orderRepository.save(order);
     }
@@ -177,7 +177,9 @@ public class OrderService {
     @Transactional
     public Order processRefund(Long orderId, BigDecimal amount, boolean restockItems) {
         Order order = orderRepository.findById(orderId).orElseThrow();
-        BigDecimal potentialTotalRefund = order.getRefundedAmount().add(amount);
+        BigDecimal currentRefunded = order.getRefundedAmount() != null ? order.getRefundedAmount() : BigDecimal.ZERO;
+        BigDecimal potentialTotalRefund = currentRefunded.add(amount);
+
         if (potentialTotalRefund.compareTo(order.getTotalAmount()) > 0) {
             throw new RuntimeException("Refund Policy Violation.");
         }
@@ -196,7 +198,11 @@ public class OrderService {
     public BigDecimal calculateTotalRevenue() {
         return orderRepository.findAll().stream()
                 .filter(o -> o.getStatus() == OrderStatus.COMPLETED || o.getStatus() == OrderStatus.SHIPPED)
-                .map(o -> o.getTotalAmount().subtract(o.getRefundedAmount()))
+                .map(o -> {
+                    BigDecimal total = o.getTotalAmount() != null ? o.getTotalAmount() : BigDecimal.ZERO;
+                    BigDecimal refund = o.getRefundedAmount() != null ? o.getRefundedAmount() : BigDecimal.ZERO;
+                    return total.subtract(refund);
+                })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
