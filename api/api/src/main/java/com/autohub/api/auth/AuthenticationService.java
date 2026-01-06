@@ -79,9 +79,6 @@ public class AuthenticationService {
         throw new RuntimeException("Invalid Refresh Token");
     }
 
-    /**
-     * LOGOUT: Clears the refresh token from the database to invalidate the session.
-     */
     public void logout(String username) {
         User user = repository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -89,16 +86,23 @@ public class AuthenticationService {
         repository.save(user);
     }
 
+    public User createInternalUser(RegisterRequest request, String roleName) {
+        Role targetRole = roleRepository.findByName(roleName)
+                .orElseThrow(() -> new RuntimeException("Role not found: " + roleName));
+        User user = new User();
+        user.setUsername(request.getUsername());
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setRole(targetRole);
+        user.setFirstName(request.getFirstName());
+        user.setLastName(request.getLastName());
+        return repository.save(user);
+    }
+
     public boolean isValidCredentials(RegisterRequest request) {
         User user = repository.findByUsername(request.getUsername()).orElse(null);
         return user != null && passwordEncoder.matches(request.getPassword(), user.getPassword());
     }
 
-    public void blacklistToken(String token) {
-        tokenBlacklist.add(token);
-    }
-
-    public boolean isTokenBlacklisted(String token) {
-        return tokenBlacklist.contains(token);
-    }
+    public void blacklistToken(String token) { tokenBlacklist.add(token); }
+    public boolean isTokenBlacklisted(String token) { return tokenBlacklist.contains(token); }
 }

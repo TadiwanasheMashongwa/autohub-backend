@@ -1,5 +1,7 @@
 package com.autohub.api.controller;
 
+import com.autohub.api.auth.AuthenticationService;
+import com.autohub.api.auth.RegisterRequest;
 import com.autohub.api.model.Order;
 import com.autohub.api.model.Part;
 import com.autohub.api.model.User;
@@ -23,11 +25,33 @@ public class AdminController {
     private final OrderService orderService;
     private final PartService partService;
     private final UserRepository userRepository;
+    private final AuthenticationService authenticationService; // Added for Clerk creation
 
-    public AdminController(OrderService orderService, PartService partService, UserRepository userRepository) {
+    public AdminController(OrderService orderService,
+                           PartService partService,
+                           UserRepository userRepository,
+                           AuthenticationService authenticationService) {
         this.orderService = orderService;
         this.partService = partService;
         this.userRepository = userRepository;
+        this.authenticationService = authenticationService;
+    }
+
+    /**
+     * NEW: Allows the Admin to create a Clerk account.
+     * Inherits the class-level ROLE_ADMIN protection.
+     */
+    @PostMapping("/create-clerk")
+    public ResponseEntity<?> createClerk(@RequestBody RegisterRequest request) {
+        try {
+            User clerk = authenticationService.createInternalUser(request, "ROLE_CLERK");
+            return ResponseEntity.ok(Map.of(
+                    "message", "Clerk created successfully",
+                    "username", clerk.getUsername()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 
     // --- DASHBOARD & STATS ---

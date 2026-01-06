@@ -5,8 +5,8 @@ import com.autohub.api.repository.*;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
-
 import java.math.BigDecimal;
+import java.util.List;
 
 @Component
 public class DataInitializer implements CommandLineRunner {
@@ -31,32 +31,34 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        // 1. Ensure Roles exist
-        Role adminRole = roleRepository.findByName("ROLE_ADMIN")
-                .orElseGet(() -> roleRepository.save(new Role(null, "ROLE_ADMIN")));
+        // 1. Ensure all 3 roles exist in the database
+        List.of("ROLE_ADMIN", "ROLE_CLERK", "ROLE_CUSTOMER").forEach(roleName -> {
+            if (roleRepository.findByName(roleName).isEmpty()) {
+                roleRepository.save(new Role(null, roleName));
+            }
+        });
 
-        roleRepository.findByName("ROLE_CUSTOMER")
-                .orElseGet(() -> roleRepository.save(new Role(null, "ROLE_CUSTOMER")));
+        Role adminRole = roleRepository.findByName("ROLE_ADMIN").orElseThrow();
 
-        // 2. FORCE REFRESH the Admin account
+        // 2. Ensure Admin account exists and is linked to ROLE_ADMIN
         userRepository.findByUsername("admin@autohub.co.zw").ifPresentOrElse(
                 (existingAdmin) -> {
                     existingAdmin.setPassword(passwordEncoder.encode("password"));
                     existingAdmin.setRole(adminRole);
                     userRepository.save(existingAdmin);
-                    System.out.println(">>> DATA: Admin password force-updated.");
                 },
                 () -> {
                     User admin = new User();
                     admin.setUsername("admin@autohub.co.zw");
                     admin.setPassword(passwordEncoder.encode("password"));
                     admin.setRole(adminRole);
+                    admin.setFirstName("System");
+                    admin.setLastName("Admin");
                     userRepository.save(admin);
-                    System.out.println(">>> DATA: Admin account created fresh.");
                 }
         );
 
-        // 3. Seed Sample Categories and Parts if empty (for Visual Catalog)
+        // 3. Seed sample data if empty
         if (categoryRepository.count() == 0) {
             Category engineCategory = new Category();
             engineCategory.setName("Engine Parts");
@@ -65,16 +67,9 @@ public class DataInitializer implements CommandLineRunner {
             Part oilFilter = new Part();
             oilFilter.setName("Premium Oil Filter");
             oilFilter.setSku("OF-TOY-001");
-            oilFilter.setBarcode("123456789");
-            oilFilter.setBrand("Bosch");
             oilFilter.setPrice(new BigDecimal("15.99"));
-            oilFilter.setStockQuantity(50);
             oilFilter.setCategory(engineCategory);
-            // Using a generic placeholder for the visual catalog
-            oilFilter.setImageUrl("https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?q=80&w=400&auto=format&fit=crop");
             partRepository.save(oilFilter);
-
-            System.out.println(">>> DATA: Visual sample parts seeded.");
         }
     }
 }
