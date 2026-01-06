@@ -13,7 +13,7 @@ import java.math.RoundingMode;
 
 /**
  * Service managing product reviews.
- * Workflow v2.4: Optimized transaction commit via DB aggregation.
+ * Workflow v2.6: Atomic Native Persistence.
  */
 @Service
 public class ReviewService {
@@ -29,7 +29,7 @@ public class ReviewService {
 
     @Transactional
     public Review addReview(User user, Long partId, Integer rating, String comment) {
-        // 1. Verify Purchaser (Confirmed working for User 21 / Part 2)
+        // 1. Verify Purchaser
         if (!orderRepository.hasUserPurchasedPart(user.getId(), partId)) {
             throw new RuntimeException("Only verified purchasers can review this part.");
         }
@@ -37,7 +37,7 @@ public class ReviewService {
         Part part = partRepository.findById(partId)
                 .orElseThrow(() -> new RuntimeException("Part not found"));
 
-        // 2. Create and Save the Review independently to lock the record
+        // 2. Save the Review
         Review review = new Review();
         review.setUser(user);
         review.setPart(part);
@@ -46,22 +46,19 @@ public class ReviewService {
 
         Review savedReview = reviewRepository.save(review);
 
-        // 3. Update Part Average Rating using fresh DB calculation
-        updatePartRating(partId);
+        // 3. Update Part Rating using NATIVE SQL (Bypasses @Version conflict)
+        updatePartRatingNative(partId);
 
         return savedReview;
     }
 
-    private void updatePartRating(Long partId) {
-        Part part = partRepository.findById(partId).orElseThrow();
-
-        // Get average from DB instead of streaming the collection in-memory
+    private void updatePartRatingNative(Long partId) {
         Double average = reviewRepository.getAverageRatingForPart(partId).orElse(0.0);
 
-        // Precision rounding to satisfy PostgreSQL numeric constraints
+        // Precision rounding
         BigDecimal bd = BigDecimal.valueOf(average).setScale(1, RoundingMode.HALF_UP);
-        part.setAverageRating(bd.doubleValue());
 
-        partRepository.save(part);
+        // Use the native method from PartRepository
+        partRepository.updateAverageRatingNative(partId, bd.doubleValue());
     }
 }

@@ -13,7 +13,6 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     List<Review> findByPartId(Long partId);
     List<Review> findByUserId(Long userId);
 
-    // NEW: Database-level calculation to prevent JPA session conflicts
     @Query("SELECT AVG(r.rating) FROM Review r WHERE r.part.id = :partId")
     Optional<Double> getAverageRatingForPart(@Param("partId") Long partId);
 }

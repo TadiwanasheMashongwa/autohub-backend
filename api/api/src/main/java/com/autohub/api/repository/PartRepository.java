@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.Optional;
 
 @Repository
@@ -28,9 +29,11 @@ public interface PartRepository extends JpaRepository<Part, Long> {
     Page<Part> findByCompatibleVehiclesId(Long vehicleId, Pageable pageable);
 
     /**
-     * UPDATED: Direct DB update to bypass Optimistic Locking (@Version) issues.
+     * NATIVE FIX: Direct SQL update to force the change into the database
+     * without Hibernate's version/dirty checking interference.
      */
     @Modifying
-    @Query("UPDATE Part p SET p.averageRating = :rating WHERE p.id = :partId")
-    void updateAverageRating(@Param("partId") Long partId, @Param("rating") Double rating);
+    @Transactional
+    @Query(value = "UPDATE parts SET average_rating = :rating WHERE id = :partId", nativeQuery = true)
+    void updateAverageRatingNative(@Param("partId") Long partId, @Param("rating") Double rating);
 }
