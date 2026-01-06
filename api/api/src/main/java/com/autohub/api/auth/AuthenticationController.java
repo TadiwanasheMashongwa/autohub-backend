@@ -6,6 +6,7 @@ import com.autohub.api.auth.RegisterRequest;
 import com.autohub.api.model.User;
 import com.autohub.api.repository.UserRepository;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
@@ -38,5 +39,12 @@ public class AuthenticationController {
         } catch (Exception e) {
             return ResponseEntity.status(403).body("Session expired. Please log in again.");
         }
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout() {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        service.logout(username);
+        return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
     }
 }

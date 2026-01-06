@@ -35,7 +35,6 @@ public class AuthenticationService {
     }
 
     public AuthenticationResponse register(RegisterRequest request) {
-        // Defaulting to Customer for registration; Admins are usually created via internal tools
         Role userRole = roleRepository.findByName("ROLE_CUSTOMER").orElseThrow();
         User user = new User();
         user.setUsername(request.getUsername());
@@ -55,10 +54,6 @@ public class AuthenticationService {
         return generateTokenForUser(user);
     }
 
-    /**
-     * UPDATED: Generates both access and refresh tokens.
-     * Persists the refresh token to the User entity to validate against later.
-     */
     public AuthenticationResponse generateTokenForUser(User user) {
         String accessToken = jwtService.generateToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
@@ -74,19 +69,24 @@ public class AuthenticationService {
         );
     }
 
-    /**
-     * NEW: Validates the provided refresh token against the stored one.
-     * If valid, it rotates both tokens for security (Token Rotation).
-     */
     public AuthenticationResponse refreshToken(String refreshToken) {
         String username = jwtService.extractUsername(refreshToken);
         User user = repository.findByUsername(username).orElseThrow();
 
-        // Validate token structure, expiration, and database match
         if (jwtService.isTokenValid(refreshToken, user) && refreshToken.equals(user.getRefreshToken())) {
             return generateTokenForUser(user);
         }
         throw new RuntimeException("Invalid or expired Refresh Token");
+    }
+
+    /**
+     * LOGOUT logic: Nullifies the refresh token in the database.
+     */
+    public void logout(String username) {
+        User user = repository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        user.setRefreshToken(null);
+        repository.save(user);
     }
 
     public boolean isValidCredentials(RegisterRequest request) {
