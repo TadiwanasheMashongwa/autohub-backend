@@ -76,11 +76,11 @@ public class AuthenticationService {
         if (jwtService.isTokenValid(refreshToken, user) && refreshToken.equals(user.getRefreshToken())) {
             return generateTokenForUser(user);
         }
-        throw new RuntimeException("Invalid or expired Refresh Token");
+        throw new RuntimeException("Invalid Refresh Token");
     }
 
     /**
-     * LOGOUT logic: Nullifies the refresh token in the database.
+     * LOGOUT: Clears the refresh token from the database to invalidate the session.
      */
     public void logout(String username) {
         User user = repository.findByUsername(username)
