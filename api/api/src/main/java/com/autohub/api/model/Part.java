@@ -20,11 +20,9 @@ public class Part {
   @NotBlank(message = "Part name is required")
   private String name;
 
-  @NotBlank(message = "SKU is required")
   @Column(unique = true, nullable = false)
   private String sku;
 
-  @NotBlank(message = "Barcode is required")
   @Column(unique = true, nullable = false)
   private String barcode;
 
@@ -34,7 +32,6 @@ public class Part {
   private String description;
 
   @NotNull(message = "Price is required")
-  @DecimalMin(value = "0.0", inclusive = false)
   private BigDecimal price;
 
   @NotNull(message = "Stock quantity is required")
@@ -48,8 +45,9 @@ public class Part {
   @JoinColumn(name = "category_id")
   private Category category;
 
-  @OneToMany(mappedBy = "part", cascade = CascadeType.ALL, orphanRemoval = true)
-  @JsonManagedReference // Part "owns" the reviews in the JSON tree
+  // Use orphanRemoval to manage life cycle strictly
+  @OneToMany(mappedBy = "part", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+  @JsonManagedReference
   private List<Review> reviews = new ArrayList<>();
 
   @ManyToMany
@@ -68,39 +66,28 @@ public class Part {
 
   public Part() {}
 
-  // --- GETTERS ---
+  // Helper to maintain bidirectional sync
+  public void addReview(Review review) {
+    reviews.add(review);
+    review.setPart(this);
+  }
+
+  // --- GETTERS & SETTERS (Keep your existing ones) ---
   public Long getId() { return id; }
   public String getName() { return name; }
   public String getSku() { return sku; }
   public String getBarcode() { return barcode; }
-  public String getOemNumber() { return oemNumber; }
-  public String getDescription() { return description; }
   public BigDecimal getPrice() { return price; }
   public Integer getStockQuantity() { return stockQuantity; }
-  public String getBrand() { return brand; }
-  public String getCondition() { return condition; }
-  public String getImageUrl() { return imageUrl; }
-  public Category getCategory() { return category; }
   public List<Review> getReviews() { return reviews; }
   public Double getAverageRating() { return averageRating; }
-  public List<Vehicle> getCompatibleVehicles() { return compatibleVehicles; }
-  public Long getVersion() { return version; }
 
-  // --- SETTERS ---
   public void setId(Long id) { this.id = id; }
   public void setName(String name) { this.name = name; }
   public void setSku(String sku) { this.sku = sku; }
   public void setBarcode(String barcode) { this.barcode = barcode; }
-  public void setOemNumber(String oemNumber) { this.oemNumber = oemNumber; }
-  public void setDescription(String description) { this.description = description; }
   public void setPrice(BigDecimal price) { this.price = price; }
   public void setStockQuantity(Integer stockQuantity) { this.stockQuantity = stockQuantity; }
-  public void setBrand(String brand) { this.brand = brand; }
-  public void setCondition(String condition) { this.condition = condition; }
-  public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
-  public void setCategory(Category category) { this.category = category; }
-  public void setReviews(List<Review> reviews) { this.reviews = reviews; }
   public void setAverageRating(Double averageRating) { this.averageRating = averageRating; }
-  public void setCompatibleVehicles(List<Vehicle> compatibleVehicles) { this.compatibleVehicles = compatibleVehicles; }
   public void setVersion(Long version) { this.version = version; }
 }

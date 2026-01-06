@@ -25,9 +25,6 @@ public class ReviewService {
 
     @Transactional
     public Review addReview(User user, Long partId, Integer rating, String comment) {
-        // Debug Log: Check IDs in IntelliJ Console
-        System.out.println("DEBUG: Verifying User ID: " + user.getId() + " for Part ID: " + partId);
-
         if (!orderRepository.hasUserPurchasedPart(user.getId(), partId)) {
             throw new RuntimeException("Only verified purchasers can review this part.");
         }
@@ -37,17 +34,13 @@ public class ReviewService {
 
         Review review = new Review();
         review.setUser(user);
-        review.setPart(part);
         review.setRating(rating);
         review.setComment(comment);
 
-        Review savedReview = reviewRepository.save(review);
-        updatePartRating(part);
+        // Link bidirectional relationship
+        part.addReview(review);
 
-        return savedReview;
-    }
-
-    private void updatePartRating(Part part) {
+        // Update Rating math
         double average = part.getReviews().stream()
                 .mapToInt(Review::getRating)
                 .average()
@@ -55,6 +48,10 @@ public class ReviewService {
 
         BigDecimal bd = BigDecimal.valueOf(average).setScale(1, RoundingMode.HALF_UP);
         part.setAverageRating(bd.doubleValue());
+
+        // Saving the Part saves the Review automatically due to CascadeType.ALL
         partRepository.save(part);
+
+        return review;
     }
 }
