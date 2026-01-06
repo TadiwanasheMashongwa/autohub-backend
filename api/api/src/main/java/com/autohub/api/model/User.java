@@ -5,7 +5,6 @@ import jakarta.persistence.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
-
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
@@ -20,7 +19,7 @@ public class User implements UserDetails {
     @Column(unique = true, nullable = false)
     private String username;
 
-    @JsonIgnore // CRITICAL: Never expose or scan password in Swagger
+    @JsonIgnore
     @Column(nullable = false)
     private String password;
 
@@ -38,6 +37,10 @@ public class User implements UserDetails {
     @JsonIgnore
     private LocalDateTime resetTokenExpiry;
 
+    // NEW: Refresh Token for session longevity
+    @JsonIgnore
+    private String refreshToken;
+
     @Column(nullable = false, columnDefinition = "boolean default false")
     private boolean mfaEnabled = false;
 
@@ -49,7 +52,7 @@ public class User implements UserDetails {
     private Role role;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnore // CRITICAL: Breaks the loop User -> Cart -> User
+    @JsonIgnore
     private Cart cart;
 
     public User() {}
@@ -69,6 +72,7 @@ public class User implements UserDetails {
     public Cart getCart() { return cart; }
     public String getResetToken() { return resetToken; }
     public LocalDateTime getResetTokenExpiry() { return resetTokenExpiry; }
+    public String getRefreshToken() { return refreshToken; }
 
     public void setId(Long id) { this.id = id; }
     public void setUsername(String username) { this.username = username; }
@@ -84,11 +88,9 @@ public class User implements UserDetails {
     public void setCart(Cart cart) { this.cart = cart; }
     public void setResetToken(String resetToken) { this.resetToken = resetToken; }
     public void setResetTokenExpiry(LocalDateTime resetTokenExpiry) { this.resetTokenExpiry = resetTokenExpiry; }
+    public void setRefreshToken(String refreshToken) { this.refreshToken = refreshToken; }
 
-    // --- SECURITY OVERRIDES (FIXED FOR SWAGGER STABILITY) ---
-    @Override
-    @JsonIgnore // CRITICAL: Swagger crashes trying to map the Authorities interface
-    public Collection<? extends GrantedAuthority> getAuthorities() {
+    @Override @JsonIgnore public Collection<? extends GrantedAuthority> getAuthorities() {
         if (role == null) return List.of();
         return List.of(new SimpleGrantedAuthority(role.getName()));
     }

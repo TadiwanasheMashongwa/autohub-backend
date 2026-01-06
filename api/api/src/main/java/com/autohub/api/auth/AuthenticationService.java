@@ -9,7 +9,6 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
 import java.util.HashSet;
 import java.util.Set;
 
@@ -21,7 +20,6 @@ public class AuthenticationService {
     private final AuthenticationManager authenticationManager;
     private final PasswordEncoder passwordEncoder;
 
-    // Simple In-memory Blacklist for Revocation logic
     private final Set<String> tokenBlacklist = new HashSet<>();
 
     public AuthenticationService(UserRepository repository,
@@ -37,29 +35,15 @@ public class AuthenticationService {
     }
 
     public AuthenticationResponse register(RegisterRequest request) {
-        Role userRole = roleRepository.findByName("ROLE_CUSTOMER")
-                .orElseThrow(() -> new RuntimeException("Error: ROLE_CUSTOMER not found."));
-
+        Role userRole = roleRepository.findByName("ROLE_CUSTOMER").orElseThrow();
         User user = new User();
         user.setUsername(request.getUsername());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(userRole);
-
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
-        user.setPhoneNumber(request.getPhoneNumber());
-        user.setBusinessName(request.getBusinessName());
-        user.setAddress(request.getAddress());
-
         repository.save(user);
-
         return generateTokenForUser(user);
-    }
-
-    public boolean isValidCredentials(RegisterRequest request) {
-        User user = repository.findByUsername(request.getUsername()).orElse(null);
-        if (user == null) return false;
-        return passwordEncoder.matches(request.getPassword(), user.getPassword());
     }
 
     public AuthenticationResponse authenticate(RegisterRequest request) {
@@ -70,20 +54,38 @@ public class AuthenticationService {
         return generateTokenForUser(user);
     }
 
+    // UPDATED: Now generates and persists both tokens
     public AuthenticationResponse generateTokenForUser(User user) {
-        String jwtToken = jwtService.generateToken(user);
+        String accessToken = jwtService.generateToken(user);
+        String refreshToken = jwtService.generateRefreshToken(user);
+
+        user.setRefreshToken(refreshToken);
+        repository.save(user);
+
         return new AuthenticationResponse(
-                jwtToken,
+                accessToken,
+                refreshToken,
                 user.getRole().getName(),
                 user.getUsername()
         );
     }
 
-    public void blacklistToken(String token) {
-        tokenBlacklist.add(token);
+    // NEW: Logic to refresh the session
+    public AuthenticationResponse refreshToken(String refreshToken) {
+        String username = jwtService.extractUsername(refreshToken);
+        User user = repository.findByUsername(username).orElseThrow();
+
+        if (jwtService.isTokenValid(refreshToken, user) && refreshToken.equals(user.getRefreshToken())) {
+            return generateTokenForUser(user);
+        }
+        throw new RuntimeException("Invalid Refresh Token");
     }
 
-    public boolean isTokenBlacklisted(String token) {
-        return tokenBlacklist.contains(token);
+    public boolean isValidCredentials(RegisterRequest request) {
+        User user = repository.findByUsername(request.getUsername()).orElse(null);
+        return user != null && passwordEncoder.matches(request.getPassword(), user.getPassword());
     }
+
+    public void blacklistToken(String token) { tokenBlacklist.add(token); }
+    public boolean isTokenBlacklisted(String token) { return tokenBlacklist.contains(token); }
 }
