@@ -47,4 +47,28 @@ public class AuthenticationController {
         service.logout(username);
         return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
     }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        try {
+            service.initiatePasswordReset(email);
+            return ResponseEntity.ok(Map.of("message", "Reset token generated. Check console logs."));
+        } catch (Exception e) {
+            // For security, don't confirm if the email exists or not
+            return ResponseEntity.ok(Map.of("message", "If an account exists, a reset link has been generated."));
+        }
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> request) {
+        String token = request.get("token");
+        String newPassword = request.get("newPassword");
+        try {
+            service.completePasswordReset(token, newPassword);
+            return ResponseEntity.ok(Map.of("message", "Password updated successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
+        }
+    }
 }

@@ -9,8 +9,10 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 
 @Service
 public class AuthenticationService {
@@ -96,6 +98,39 @@ public class AuthenticationService {
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
         return repository.save(user);
+    }
+
+    /**
+     * NEW: Initiates the password reset process.
+     */
+    public void initiatePasswordReset(String username) {
+        User user = repository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        String token = UUID.randomUUID().toString();
+        user.setResetToken(token);
+        user.setResetTokenExpiry(LocalDateTime.now().plusMinutes(15)); // 15-minute window
+        repository.save(user);
+
+        // Log the token for now since we haven't integrated an Email Service yet
+        System.out.println(">>> RESET TOKEN for " + username + ": " + token);
+    }
+
+    /**
+     * NEW: Completes the password reset process.
+     */
+    public void completePasswordReset(String token, String newPassword) {
+        User user = repository.findByResetToken(token)
+                .orElseThrow(() -> new RuntimeException("Invalid reset token"));
+
+        if (user.getResetTokenExpiry().isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("Reset token has expired");
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setResetToken(null);
+        user.setResetTokenExpiry(null);
+        repository.save(user);
     }
 
     public boolean isValidCredentials(RegisterRequest request) {
