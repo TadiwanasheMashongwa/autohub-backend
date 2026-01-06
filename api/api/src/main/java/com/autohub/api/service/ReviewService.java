@@ -25,6 +25,7 @@ public class ReviewService {
 
     @Transactional
     public Review addReview(User user, Long partId, Integer rating, String comment) {
+        // 1. Verify Purchaser (Confirmed working via logs)
         if (!orderRepository.hasUserPurchasedPart(user.getId(), partId)) {
             throw new RuntimeException("Only verified purchasers can review this part.");
         }
@@ -37,19 +38,19 @@ public class ReviewService {
         review.setRating(rating);
         review.setComment(comment);
 
-        // Link bidirectional relationship
+        // 2. Link bidirectionally and calculate rating
         part.addReview(review);
 
-        // Update Rating math
         double average = part.getReviews().stream()
                 .mapToInt(Review::getRating)
                 .average()
                 .orElse(0.0);
 
+        // 3. Precision rounding to satisfy PostgreSQL numeric constraints
         BigDecimal bd = BigDecimal.valueOf(average).setScale(1, RoundingMode.HALF_UP);
         part.setAverageRating(bd.doubleValue());
 
-        // Saving the Part saves the Review automatically due to CascadeType.ALL
+        // 4. Atomic Save (Review is saved automatically via CascadeType.ALL on Part)
         partRepository.save(part);
 
         return review;

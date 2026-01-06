@@ -45,7 +45,6 @@ public class Part {
   @JoinColumn(name = "category_id")
   private Category category;
 
-  // Use orphanRemoval to manage life cycle strictly
   @OneToMany(mappedBy = "part", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
   @JsonManagedReference
   private List<Review> reviews = new ArrayList<>();
@@ -66,28 +65,45 @@ public class Part {
 
   public Part() {}
 
-  // Helper to maintain bidirectional sync
+  // Bidirectional Helper
   public void addReview(Review review) {
     reviews.add(review);
     review.setPart(this);
   }
 
-  // --- GETTERS & SETTERS (Keep your existing ones) ---
+  // --- GETTERS ---
   public Long getId() { return id; }
   public String getName() { return name; }
   public String getSku() { return sku; }
   public String getBarcode() { return barcode; }
+  public String getOemNumber() { return oemNumber; }
+  public String getDescription() { return description; }
   public BigDecimal getPrice() { return price; }
   public Integer getStockQuantity() { return stockQuantity; }
+  public String getBrand() { return brand; }
+  public String getCondition() { return condition; }
+  public String getImageUrl() { return imageUrl; }
+  public Category getCategory() { return category; }
   public List<Review> getReviews() { return reviews; }
   public Double getAverageRating() { return averageRating; }
+  public List<Vehicle> getCompatibleVehicles() { return compatibleVehicles; }
+  public Long getVersion() { return version; }
 
+  // --- SETTERS (Fixed to include missing methods) ---
   public void setId(Long id) { this.id = id; }
   public void setName(String name) { this.name = name; }
   public void setSku(String sku) { this.sku = sku; }
   public void setBarcode(String barcode) { this.barcode = barcode; }
+  public void setOemNumber(String oemNumber) { this.oemNumber = oemNumber; }
+  public void setDescription(String description) { this.description = description; }
   public void setPrice(BigDecimal price) { this.price = price; }
   public void setStockQuantity(Integer stockQuantity) { this.stockQuantity = stockQuantity; }
+  public void setBrand(String brand) { this.brand = brand; } // FIXED
+  public void setCondition(String condition) { this.condition = condition; } // FIXED
+  public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; } // FIXED
+  public void setCategory(Category category) { this.category = category; }
+  public void setReviews(List<Review> reviews) { this.reviews = reviews; }
   public void setAverageRating(Double averageRating) { this.averageRating = averageRating; }
+  public void setCompatibleVehicles(List<Vehicle> compatibleVehicles) { this.compatibleVehicles = compatibleVehicles; }
   public void setVersion(Long version) { this.version = version; }
 }
