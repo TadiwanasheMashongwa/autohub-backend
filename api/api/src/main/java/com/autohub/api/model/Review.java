@@ -19,30 +19,33 @@ public class Review {
 
     @ManyToOne
     @JoinColumn(name = "part_id")
-    @JsonBackReference // Stops infinite recursion during JSON generation
+    @JsonBackReference
     private Part part;
 
+    // CHANGED: From Integer to Double to allow 4.5 star ratings
     @Min(1) @Max(5)
-    private Integer rating;
+    private Double rating;
 
     @Column(columnDefinition = "TEXT")
     private String comment;
 
     private LocalDateTime createdAt;
 
-    public Review() { this.createdAt = LocalDateTime.now(); }
+    public Review() {
+        this.createdAt = LocalDateTime.now();
+    }
 
     public Long getId() { return id; }
     public User getUser() { return user; }
     public Part getPart() { return part; }
-    public Integer getRating() { return rating; }
+    public Double getRating() { return rating; }
     public String getComment() { return comment; }
     public LocalDateTime getCreatedAt() { return createdAt; }
 
     public void setId(Long id) { this.id = id; }
     public void setUser(User user) { this.user = user; }
     public void setPart(Part part) { this.part = part; }
-    public void setRating(Integer rating) { this.rating = rating; }
+    public void setRating(Double rating) { this.rating = rating; }
     public void setComment(String comment) { this.comment = comment; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

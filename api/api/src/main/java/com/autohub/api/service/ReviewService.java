@@ -13,7 +13,7 @@ import java.math.RoundingMode;
 
 /**
  * Service managing product reviews.
- * Workflow v2.6: Atomic Native Persistence.
+ * Workflow v2.7: Duplicate Prevention & Decimal Precision.
  */
 @Service
 public class ReviewService {
@@ -28,25 +28,30 @@ public class ReviewService {
     }
 
     @Transactional
-    public Review addReview(User user, Long partId, Integer rating, String comment) {
+    public Review addReview(User user, Long partId, Double rating, String comment) {
         // 1. Verify Purchaser
         if (!orderRepository.hasUserPurchasedPart(user.getId(), partId)) {
             throw new RuntimeException("Only verified purchasers can review this part.");
         }
 
+        // 2. Prevent Duplicate Reviews (FIX: stops double posting)
+        if (reviewRepository.existsByUserIdAndPartId(user.getId(), partId)) {
+            throw new RuntimeException("You have already reviewed this part.");
+        }
+
         Part part = partRepository.findById(partId)
                 .orElseThrow(() -> new RuntimeException("Part not found"));
 
-        // 2. Save the Review
+        // 3. Save the Review
         Review review = new Review();
         review.setUser(user);
         review.setPart(part);
-        review.setRating(rating);
+        review.setRating(rating); // Now supports decimals like 4.5
         review.setComment(comment);
 
         Review savedReview = reviewRepository.save(review);
 
-        // 3. Update Part Rating using NATIVE SQL (Bypasses @Version conflict)
+        // 4. Update Part Rating using Native SQL
         updatePartRatingNative(partId);
 
         return savedReview;
@@ -54,11 +59,7 @@ public class ReviewService {
 
     private void updatePartRatingNative(Long partId) {
         Double average = reviewRepository.getAverageRatingForPart(partId).orElse(0.0);
-
-        // Precision rounding
         BigDecimal bd = BigDecimal.valueOf(average).setScale(1, RoundingMode.HALF_UP);
-
-        // Use the native method from PartRepository
         partRepository.updateAverageRatingNative(partId, bd.doubleValue());
     }
 }
