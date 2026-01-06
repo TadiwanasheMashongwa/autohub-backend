@@ -12,6 +12,10 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * REST Controller for managing product reviews.
+ * Workflow v2.8: Supports Decimal Ratings and Duplicate Prevention.
+ */
 @RestController
 @RequestMapping("/api/v1/reviews")
 public class ReviewController {
@@ -31,14 +35,14 @@ public class ReviewController {
         User user = userRepository.findByUsername(authentication.getName())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        // Safe extraction for Long and Double types
         Long partId = Long.valueOf(payload.get("partId").toString());
-        Integer rating = (Integer) payload.get("rating");
+        Double rating = Double.valueOf(payload.get("rating").toString());
         String comment = (String) payload.get("comment");
 
         return ResponseEntity.ok(reviewService.addReview(user, partId, rating, comment));
     }
 
-    // NEW: Needed for the Full Use Case (Customer browsing metrics)
     @GetMapping("/part/{partId}")
     public ResponseEntity<List<Review>> getReviewsByPart(@PathVariable Long partId) {
         return ResponseEntity.ok(reviewRepository.findByPartId(partId));
