@@ -2,14 +2,18 @@ package com.autohub.api.repository;
 
 import com.autohub.api.model.Review;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ReviewRepository extends JpaRepository<Review, Long> {
-    // Allows us to fetch all reviews for a specific part (e.g., for the product page)
     List<Review> findByPartId(Long partId);
-
-    // Allows us to see all reviews written by a specific user
     List<Review> findByUserId(Long userId);
+
+    // NEW: Database-level calculation to prevent JPA session conflicts
+    @Query("SELECT AVG(r.rating) FROM Review r WHERE r.part.id = :partId")
+    Optional<Double> getAverageRatingForPart(@Param("partId") Long partId);
 }
