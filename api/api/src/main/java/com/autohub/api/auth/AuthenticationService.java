@@ -35,6 +35,7 @@ public class AuthenticationService {
     }
 
     public AuthenticationResponse register(RegisterRequest request) {
+        // Defaulting to Customer for registration; Admins are usually created via internal tools
         Role userRole = roleRepository.findByName("ROLE_CUSTOMER").orElseThrow();
         User user = new User();
         user.setUsername(request.getUsername());
@@ -54,7 +55,10 @@ public class AuthenticationService {
         return generateTokenForUser(user);
     }
 
-    // UPDATED: Now generates and persists both tokens
+    /**
+     * UPDATED: Generates both access and refresh tokens.
+     * Persists the refresh token to the User entity to validate against later.
+     */
     public AuthenticationResponse generateTokenForUser(User user) {
         String accessToken = jwtService.generateToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
@@ -70,15 +74,19 @@ public class AuthenticationService {
         );
     }
 
-    // NEW: Logic to refresh the session
+    /**
+     * NEW: Validates the provided refresh token against the stored one.
+     * If valid, it rotates both tokens for security (Token Rotation).
+     */
     public AuthenticationResponse refreshToken(String refreshToken) {
         String username = jwtService.extractUsername(refreshToken);
         User user = repository.findByUsername(username).orElseThrow();
 
+        // Validate token structure, expiration, and database match
         if (jwtService.isTokenValid(refreshToken, user) && refreshToken.equals(user.getRefreshToken())) {
             return generateTokenForUser(user);
         }
-        throw new RuntimeException("Invalid Refresh Token");
+        throw new RuntimeException("Invalid or expired Refresh Token");
     }
 
     public boolean isValidCredentials(RegisterRequest request) {
@@ -86,6 +94,11 @@ public class AuthenticationService {
         return user != null && passwordEncoder.matches(request.getPassword(), user.getPassword());
     }
 
-    public void blacklistToken(String token) { tokenBlacklist.add(token); }
-    public boolean isTokenBlacklisted(String token) { return tokenBlacklist.contains(token); }
+    public void blacklistToken(String token) {
+        tokenBlacklist.add(token);
+    }
+
+    public boolean isTokenBlacklisted(String token) {
+        return tokenBlacklist.contains(token);
+    }
 }

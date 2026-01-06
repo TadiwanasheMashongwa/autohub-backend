@@ -19,13 +19,11 @@ public class AuthenticationResponse {
         this.username = username;
     }
 
-    // --- GETTERS ---
     public String getAccessToken() { return accessToken; }
     public String getRefreshToken() { return refreshToken; }
     public String getRole() { return role; }
     public String getUsername() { return username; }
 
-    // --- SETTERS ---
     public void setAccessToken(String accessToken) { this.accessToken = accessToken; }
     public void setRefreshToken(String refreshToken) { this.refreshToken = refreshToken; }
     public void setRole(String role) { this.role = role; }

@@ -37,7 +37,6 @@ public class User implements UserDetails {
     @JsonIgnore
     private LocalDateTime resetTokenExpiry;
 
-    // NEW: Refresh Token for session longevity
     @JsonIgnore
     private String refreshToken;
 
@@ -57,7 +56,7 @@ public class User implements UserDetails {
 
     public User() {}
 
-    // --- GETTERS & SETTERS ---
+    // Getters and Setters (Standard implementation)
     public Long getId() { return id; }
     public String getUsername() { return username; }
     public String getPassword() { return password; }
