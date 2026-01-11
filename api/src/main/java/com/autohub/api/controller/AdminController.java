@@ -25,7 +25,7 @@ public class AdminController {
     private final OrderService orderService;
     private final PartService partService;
     private final UserRepository userRepository;
-    private final AuthenticationService authenticationService; // Added for Clerk creation
+    private final AuthenticationService authenticationService;
 
     public AdminController(OrderService orderService,
                            PartService partService,
@@ -38,8 +38,8 @@ public class AdminController {
     }
 
     /**
-     * NEW: Allows the Admin to create a Clerk account.
-     * Inherits the class-level ROLE_ADMIN protection.
+     * UPDATED: Allows the Admin to create a Clerk account.
+     * Uses the restored createInternalUser method with Auto-Username logic.
      */
     @PostMapping("/create-clerk")
     public ResponseEntity<?> createClerk(@RequestBody RegisterRequest request) {
@@ -47,7 +47,8 @@ public class AdminController {
             User clerk = authenticationService.createInternalUser(request, "ROLE_CLERK");
             return ResponseEntity.ok(Map.of(
                     "message", "Clerk created successfully",
-                    "username", clerk.getUsername()
+                    "email", clerk.getEmail(),
+                    "displayName", clerk.getActualUsername()
             ));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));

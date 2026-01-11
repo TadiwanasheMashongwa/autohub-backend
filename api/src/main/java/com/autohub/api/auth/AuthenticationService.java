@@ -48,14 +48,16 @@ public class AuthenticationService {
         Role userRole = roleRepository.findByName("ROLE_CUSTOMER").orElseThrow();
         User user = new User();
 
-        // Automated Identity Logic
+        // Map identity & security
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(userRole);
+
+        // Profile details
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
 
-        // Combine names for display/username column
+        // AUTO-GENERATE USERNAME
         user.setUsername(request.getFirstName() + " " + request.getLastName());
 
         user.setPhoneNumber(request.getPhoneNumber());
@@ -64,6 +66,30 @@ public class AuthenticationService {
 
         repository.save(user);
         return generateTokenForUser(user);
+    }
+
+    /**
+     * RESTORED: For AdminController to create internal accounts (Admins/Clerks).
+     */
+    public User createInternalUser(RegisterRequest request, String roleName) {
+        Role targetRole = roleRepository.findByName(roleName)
+                .orElseThrow(() -> new RuntimeException("Role not found: " + roleName));
+
+        User user = new User();
+        user.setEmail(request.getEmail());
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setRole(targetRole);
+        user.setFirstName(request.getFirstName());
+        user.setLastName(request.getLastName());
+
+        // Consistent Username Logic
+        user.setUsername(request.getFirstName() + " " + request.getLastName());
+
+        user.setPhoneNumber(request.getPhoneNumber());
+        user.setBusinessName(request.getBusinessName());
+        user.setAddress(request.getAddress());
+
+        return repository.save(user);
     }
 
     public AuthenticationResponse authenticate(RegisterRequest request) {
