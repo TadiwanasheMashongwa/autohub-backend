@@ -21,21 +21,21 @@ public class ApplicationConfig {
         this.userRepository = userRepository;
     }
 
+    /**
+     * UPDATED: Now looks up users by Email.
+     * Spring Security passes the 'principal' (email) into the 'username' parameter.
+     */
     @Bean
     public UserDetailsService userDetailsService() {
-        return username -> userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        return username -> userRepository.findByEmail(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + username));
     }
 
     @Bean
     public AuthenticationProvider authenticationProvider() {
-        // Corrected: DaoAuthenticationProvider uses a no-args constructor
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-
-        // Use setter methods to inject the required dependencies
         authProvider.setUserDetailsService(userDetailsService());
         authProvider.setPasswordEncoder(passwordEncoder());
-
         return authProvider;
     }
 
