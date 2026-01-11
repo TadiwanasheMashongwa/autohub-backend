@@ -41,6 +41,11 @@ public class AuthenticationService {
     }
 
     public AuthenticationResponse register(RegisterRequest request) {
+        // FIXED: Pre-check for existing email to prevent duplicates
+        if (repository.findByEmail(request.getEmail()).isPresent()) {
+            throw new RuntimeException("An account with this email already exists.");
+        }
+
         Role userRole = roleRepository.findByName("ROLE_CUSTOMER").orElseThrow();
         User user = new User();
 
