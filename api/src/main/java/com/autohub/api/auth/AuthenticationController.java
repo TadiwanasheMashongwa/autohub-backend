@@ -22,6 +22,18 @@ public class AuthenticationController {
         this.userRepository = userRepository;
     }
 
+    /**
+     * NEW: Endpoint for new customers to join AutoHub.
+     */
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
+        try {
+            return ResponseEntity.ok(service.register(request));
+        } catch (Exception e) {
+            return ResponseEntity.status(400).body(Map.of("error", "Registration failed: " + e.getMessage()));
+        }
+    }
+
     @PostMapping("/login")
     public ResponseEntity<?> authenticate(@RequestBody RegisterRequest request) {
         User user = userRepository.findByUsername(request.getUsername()).orElse(null);
