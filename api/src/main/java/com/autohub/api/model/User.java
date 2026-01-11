@@ -16,10 +16,10 @@ public class User implements UserDetails {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, nullable = false)
+    @Column(nullable = false) // Removed unique=true to allow duplicate display names
     private String username;
 
-    @Column(unique = true, nullable = false) // Added email field
+    @Column(unique = true, nullable = false) // Email is now the unique login key
     private String email;
 
     @JsonIgnore
@@ -59,10 +59,35 @@ public class User implements UserDetails {
 
     public User() {}
 
-    // Getters and Setters
+    // --- UserDetails Overrides ---
+
+    /**
+     * IMPORTANT: This tells Spring Security that for all authentication
+     * and JWT purposes, the 'username' is actually the user's email.
+     */
+    @Override
+    @JsonIgnore
+    public String getUsername() {
+        return email;
+    }
+
+    @Override @JsonIgnore public Collection<? extends GrantedAuthority> getAuthorities() {
+        if (role == null) return List.of();
+        return List.of(new SimpleGrantedAuthority(role.getName()));
+    }
+    @Override @JsonIgnore public boolean isAccountNonExpired() { return true; }
+    @Override @JsonIgnore public boolean isAccountNonLocked() { return true; }
+    @Override @JsonIgnore public boolean isCredentialsNonExpired() { return true; }
+    @Override @JsonIgnore public boolean isEnabled() { return true; }
+
+    // --- Getters and Setters ---
+
     public Long getId() { return id; }
-    public String getUsername() { return username; }
-    public String getEmail() { return email; } // Added
+
+    // We keep this getter for cases where we need the actual display name
+    public String getActualUsername() { return username; }
+
+    public String getEmail() { return email; }
     public String getPassword() { return password; }
     public String getFirstName() { return firstName; }
     public String getLastName() { return lastName; }
@@ -79,7 +104,7 @@ public class User implements UserDetails {
 
     public void setId(Long id) { this.id = id; }
     public void setUsername(String username) { this.username = username; }
-    public void setEmail(String email) { this.email = email; } // Added
+    public void setEmail(String email) { this.email = email; }
     public void setPassword(String password) { this.password = password; }
     public void setFirstName(String firstName) { this.firstName = firstName; }
     public void setLastName(String lastName) { this.lastName = lastName; }
@@ -93,13 +118,4 @@ public class User implements UserDetails {
     public void setResetToken(String resetToken) { this.resetToken = resetToken; }
     public void setResetTokenExpiry(LocalDateTime resetTokenExpiry) { this.resetTokenExpiry = resetTokenExpiry; }
     public void setRefreshToken(String refreshToken) { this.refreshToken = refreshToken; }
-
-    @Override @JsonIgnore public Collection<? extends GrantedAuthority> getAuthorities() {
-        if (role == null) return List.of();
-        return List.of(new SimpleGrantedAuthority(role.getName()));
-    }
-    @Override @JsonIgnore public boolean isAccountNonExpired() { return true; }
-    @Override @JsonIgnore public boolean isAccountNonLocked() { return true; }
-    @Override @JsonIgnore public boolean isCredentialsNonExpired() { return true; }
-    @Override @JsonIgnore public boolean isEnabled() { return true; }
 }
