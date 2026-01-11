@@ -22,7 +22,7 @@ public class AuthenticationService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final PasswordEncoder passwordEncoder;
-    private final EmailService emailService; // Ensure this is injected
+    private final EmailService emailService;
 
     private final Set<String> tokenBlacklist = new HashSet<>();
 
@@ -43,12 +43,20 @@ public class AuthenticationService {
     public AuthenticationResponse register(RegisterRequest request) {
         Role userRole = roleRepository.findByName("ROLE_CUSTOMER").orElseThrow();
         User user = new User();
+
+        // 1. Map identity & security
         user.setUsername(request.getUsername());
-        user.setEmail(request.getEmail()); // Now saving email
+        user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(userRole);
+
+        // 2. Map all profile details (Now correctly included)
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
+        user.setPhoneNumber(request.getPhoneNumber());
+        user.setBusinessName(request.getBusinessName());
+        user.setAddress(request.getAddress());
+
         repository.save(user);
         return generateTokenForUser(user);
     }
@@ -64,7 +72,6 @@ public class AuthenticationService {
     public AuthenticationResponse generateTokenForUser(User user) {
         String accessToken = jwtService.generateToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
-
         user.setRefreshToken(refreshToken);
         repository.save(user);
 
@@ -98,16 +105,18 @@ public class AuthenticationService {
                 .orElseThrow(() -> new RuntimeException("Role not found: " + roleName));
         User user = new User();
         user.setUsername(request.getUsername());
-        user.setEmail(request.getEmail()); // Now saving email for internal users too
+        user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(targetRole);
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
+        user.setPhoneNumber(request.getPhoneNumber());
+        user.setBusinessName(request.getBusinessName());
+        user.setAddress(request.getAddress());
         return repository.save(user);
     }
 
     public void initiatePasswordReset(String email) {
-        // Now finding by EMAIL
         User user = repository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
 
@@ -116,7 +125,6 @@ public class AuthenticationService {
         user.setResetTokenExpiry(LocalDateTime.now().plusMinutes(15));
         repository.save(user);
 
-        // Send the real email
         emailService.sendPasswordResetEmail(user.getEmail(), token);
         System.out.println(">>> SUCCESS: Reset email sent to " + email);
     }

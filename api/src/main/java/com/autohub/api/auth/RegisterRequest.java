@@ -23,6 +23,7 @@ public class RegisterRequest {
     @Email(message = "Please provide a valid email address")
     private String email;
 
+    // Optional fields for individuals
     private String phoneNumber;
     private String businessName;
     private String address;
