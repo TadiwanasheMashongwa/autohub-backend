@@ -1,8 +1,5 @@
 package com.autohub.api.auth;
 
-import com.autohub.api.auth.AuthenticationResponse;
-import com.autohub.api.auth.AuthenticationService;
-import com.autohub.api.auth.RegisterRequest;
 import com.autohub.api.model.User;
 import com.autohub.api.repository.UserRepository;
 import jakarta.validation.Valid;
@@ -28,13 +25,12 @@ public class AuthenticationController {
         try {
             return ResponseEntity.ok(service.register(request));
         } catch (Exception e) {
-            return ResponseEntity.status(400).body(Map.of("error", "Registration failed: " + e.getMessage()));
+            return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
         }
     }
 
     @PostMapping("/login")
     public ResponseEntity<?> authenticate(@RequestBody RegisterRequest request) {
-        // Authenticate by Email
         User user = userRepository.findByEmail(request.getEmail()).orElse(null);
         if (user == null || !service.isValidCredentials(request)) {
             return ResponseEntity.status(401).body("Invalid credentials");

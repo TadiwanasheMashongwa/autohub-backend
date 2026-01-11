@@ -41,7 +41,6 @@ public class AuthenticationService {
     }
 
     public AuthenticationResponse register(RegisterRequest request) {
-        // FIXED: Pre-check for existing email to prevent duplicates
         if (repository.findByEmail(request.getEmail()).isPresent()) {
             throw new RuntimeException("An account with this email already exists.");
         }
@@ -49,15 +48,16 @@ public class AuthenticationService {
         Role userRole = roleRepository.findByName("ROLE_CUSTOMER").orElseThrow();
         User user = new User();
 
-        // Identity & Security
-        user.setUsername(request.getUsername());
+        // Automated Identity Logic
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(userRole);
-
-        // Profile details
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
+
+        // Combine names for display/username column
+        user.setUsername(request.getFirstName() + " " + request.getLastName());
+
         user.setPhoneNumber(request.getPhoneNumber());
         user.setBusinessName(request.getBusinessName());
         user.setAddress(request.getAddress());
@@ -67,7 +67,6 @@ public class AuthenticationService {
     }
 
     public AuthenticationResponse authenticate(RegisterRequest request) {
-        // Authenticate using Email as the principal
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
@@ -85,7 +84,7 @@ public class AuthenticationService {
                 accessToken,
                 refreshToken,
                 user.getRole().getName(),
-                user.getEmail() // Returning Email as the unique identifier
+                user.getEmail()
         );
     }
 
@@ -104,22 +103,6 @@ public class AuthenticationService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
         user.setRefreshToken(null);
         repository.save(user);
-    }
-
-    public User createInternalUser(RegisterRequest request, String roleName) {
-        Role targetRole = roleRepository.findByName(roleName)
-                .orElseThrow(() -> new RuntimeException("Role not found: " + roleName));
-        User user = new User();
-        user.setUsername(request.getUsername());
-        user.setEmail(request.getEmail());
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setRole(targetRole);
-        user.setFirstName(request.getFirstName());
-        user.setLastName(request.getLastName());
-        user.setPhoneNumber(request.getPhoneNumber());
-        user.setBusinessName(request.getBusinessName());
-        user.setAddress(request.getAddress());
-        return repository.save(user);
     }
 
     public void initiatePasswordReset(String email) {

@@ -16,10 +16,10 @@ public class User implements UserDetails {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false) // Removed unique=true to allow duplicate display names
+    @Column(nullable = false)
     private String username;
 
-    @Column(unique = true, nullable = false) // Email is now the unique login key
+    @Column(unique = true, nullable = false)
     private String email;
 
     @JsonIgnore
@@ -59,12 +59,6 @@ public class User implements UserDetails {
 
     public User() {}
 
-    // --- UserDetails Overrides ---
-
-    /**
-     * IMPORTANT: This tells Spring Security that for all authentication
-     * and JWT purposes, the 'username' is actually the user's email.
-     */
     @Override
     @JsonIgnore
     public String getUsername() {
@@ -80,13 +74,8 @@ public class User implements UserDetails {
     @Override @JsonIgnore public boolean isCredentialsNonExpired() { return true; }
     @Override @JsonIgnore public boolean isEnabled() { return true; }
 
-    // --- Getters and Setters ---
-
     public Long getId() { return id; }
-
-    // We keep this getter for cases where we need the actual display name
     public String getActualUsername() { return username; }
-
     public String getEmail() { return email; }
     public String getPassword() { return password; }
     public String getFirstName() { return firstName; }

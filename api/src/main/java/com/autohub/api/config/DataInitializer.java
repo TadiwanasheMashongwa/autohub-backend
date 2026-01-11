@@ -31,7 +31,6 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        // 1. Seed Roles
         List.of("ROLE_ADMIN", "ROLE_CLERK", "ROLE_CUSTOMER").forEach(roleName -> {
             if (roleRepository.findByName(roleName).isEmpty()) {
                 roleRepository.save(new Role(null, roleName));
@@ -40,7 +39,6 @@ public class DataInitializer implements CommandLineRunner {
 
         Role adminRole = roleRepository.findByName("ROLE_ADMIN").orElseThrow();
 
-        // 2. Seed Admin - Lookup by Email
         String adminEmail = "admin@autohub.co.zw";
         userRepository.findByEmail(adminEmail).ifPresentOrElse(
                 (existingAdmin) -> {
@@ -50,17 +48,16 @@ public class DataInitializer implements CommandLineRunner {
                 },
                 () -> {
                     User admin = new User();
-                    admin.setUsername("Admin"); // Display name
+                    admin.setFirstName("System");
+                    admin.setLastName("Admin");
+                    admin.setUsername("System Admin");
                     admin.setEmail(adminEmail);
                     admin.setPassword(passwordEncoder.encode("password"));
                     admin.setRole(adminRole);
-                    admin.setFirstName("System");
-                    admin.setLastName("Admin");
                     userRepository.save(admin);
                 }
         );
 
-        // 3. Seed Sample Parts
         if (categoryRepository.count() == 0) {
             Category engineCategory = new Category();
             engineCategory.setName("Engine Parts");
