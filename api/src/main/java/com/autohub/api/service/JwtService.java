@@ -6,7 +6,6 @@ import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
-
 import javax.crypto.SecretKey;
 import java.util.Date;
 import java.util.HashMap;
@@ -16,7 +15,6 @@ import java.util.function.Function;
 @Service
 public class JwtService {
 
-    // IMPORTANT: In production, move this to Railway Environment Variables!
     private static final String SECRET_KEY = "NDI0MjQyNDI0MjQyNDI0MjQyNDI0MjQyNDI0MjQyNDI0MjQyNDI0Mg==";
 
     public String extractUsername(String token) {
@@ -28,16 +26,22 @@ public class JwtService {
         return claimsResolver.apply(claims);
     }
 
+    // NEW: Access Token (Short-lived: 15 Minutes)
     public String generateToken(UserDetails userDetails) {
-        return generateToken(new HashMap<>(), userDetails);
-    }
-
-    public String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {
         return Jwts.builder()
-                .claims(extraClaims)
                 .subject(userDetails.getUsername())
                 .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(new Date(System.currentTimeMillis() + 1000 * 60 * 24)) // 24 hours
+                .expiration(new Date(System.currentTimeMillis() + 1000 * 60 * 15))
+                .signWith(getSignInKey())
+                .compact();
+    }
+
+    // NEW: Refresh Token (Long-lived: 7 Days)
+    public String generateRefreshToken(UserDetails userDetails) {
+        return Jwts.builder()
+                .subject(userDetails.getUsername())
+                .issuedAt(new Date(System.currentTimeMillis()))
+                .expiration(new Date(System.currentTimeMillis() + 1000L * 60 * 60 * 24 * 7))
                 .signWith(getSignInKey())
                 .compact();
     }

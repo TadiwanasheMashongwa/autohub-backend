@@ -18,7 +18,38 @@ public class VehicleService {
         return vehicleRepository.findAll();
     }
 
+    public Vehicle getVehicleById(Long id) {
+        return vehicleRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Vehicle not found with id: " + id));
+    }
+
     public Vehicle saveVehicle(Vehicle vehicle) {
         return vehicleRepository.save(vehicle);
+    }
+
+    public Vehicle updateVehicle(Long id, Vehicle details) {
+        Vehicle vehicle = getVehicleById(id);
+        vehicle.setMake(details.getMake());
+        vehicle.setModel(details.getModel());
+        vehicle.setYearRange(details.getYearRange());
+        vehicle.setEngineCode(details.getEngineCode());
+        return vehicleRepository.save(vehicle);
+    }
+
+    public void deleteVehicle(Long id) {
+        Vehicle vehicle = getVehicleById(id);
+        vehicleRepository.delete(vehicle);
+    }
+
+    public List<String> getUniqueMakes() {
+        return vehicleRepository.findDistinctMakes();
+    }
+
+    public List<String> getModelsByMake(String make) {
+        return vehicleRepository.findDistinctModelsByMake(make);
+    }
+
+    public List<String> getYearRangesByMakeAndModel(String make, String model) {
+        return vehicleRepository.findDistinctYearRangesByMakeAndModel(make, model);
     }
 }
