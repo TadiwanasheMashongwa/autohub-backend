@@ -44,13 +44,13 @@ public class AuthenticationService {
         Role userRole = roleRepository.findByName("ROLE_CUSTOMER").orElseThrow();
         User user = new User();
 
-        // 1. Map identity & security
+        // Identity & Security
         user.setUsername(request.getUsername());
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(userRole);
 
-        // 2. Map all profile details (Now correctly included)
+        // Profile details
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
         user.setPhoneNumber(request.getPhoneNumber());
@@ -62,10 +62,11 @@ public class AuthenticationService {
     }
 
     public AuthenticationResponse authenticate(RegisterRequest request) {
+        // Authenticate using Email as the principal
         authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
+                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
-        User user = repository.findByUsername(request.getUsername()).orElseThrow();
+        User user = repository.findByEmail(request.getEmail()).orElseThrow();
         return generateTokenForUser(user);
     }
 
@@ -79,13 +80,13 @@ public class AuthenticationService {
                 accessToken,
                 refreshToken,
                 user.getRole().getName(),
-                user.getUsername()
+                user.getEmail() // Returning Email as the unique identifier
         );
     }
 
     public AuthenticationResponse refreshToken(String refreshToken) {
-        String username = jwtService.extractUsername(refreshToken);
-        User user = repository.findByUsername(username).orElseThrow();
+        String email = jwtService.extractUsername(refreshToken);
+        User user = repository.findByEmail(email).orElseThrow();
 
         if (jwtService.isTokenValid(refreshToken, user) && refreshToken.equals(user.getRefreshToken())) {
             return generateTokenForUser(user);
@@ -93,8 +94,8 @@ public class AuthenticationService {
         throw new RuntimeException("Invalid Refresh Token");
     }
 
-    public void logout(String username) {
-        User user = repository.findByUsername(username)
+    public void logout(String email) {
+        User user = repository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         user.setRefreshToken(null);
         repository.save(user);
@@ -144,7 +145,7 @@ public class AuthenticationService {
     }
 
     public boolean isValidCredentials(RegisterRequest request) {
-        User user = repository.findByUsername(request.getUsername()).orElse(null);
+        User user = repository.findByEmail(request.getEmail()).orElse(null);
         return user != null && passwordEncoder.matches(request.getPassword(), user.getPassword());
     }
 

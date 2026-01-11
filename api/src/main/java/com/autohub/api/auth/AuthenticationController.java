@@ -23,9 +23,6 @@ public class AuthenticationController {
         this.userRepository = userRepository;
     }
 
-    /**
-     * UPDATED: Added @Valid to enforce RegisterRequest constraints.
-     */
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
         try {
@@ -37,7 +34,8 @@ public class AuthenticationController {
 
     @PostMapping("/login")
     public ResponseEntity<?> authenticate(@RequestBody RegisterRequest request) {
-        User user = userRepository.findByUsername(request.getUsername()).orElse(null);
+        // Authenticate by Email
+        User user = userRepository.findByEmail(request.getEmail()).orElse(null);
         if (user == null || !service.isValidCredentials(request)) {
             return ResponseEntity.status(401).body("Invalid credentials");
         }
@@ -56,8 +54,8 @@ public class AuthenticationController {
 
     @PostMapping("/logout")
     public ResponseEntity<?> logout() {
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        service.logout(username);
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        service.logout(email);
         return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
     }
 
@@ -66,10 +64,9 @@ public class AuthenticationController {
         String email = request.get("email");
         try {
             service.initiatePasswordReset(email);
-            return ResponseEntity.ok(Map.of("message", "Reset token generated. Check your inbox."));
+            return ResponseEntity.ok(Map.of("message", "Reset link sent. Check your inbox."));
         } catch (Exception e) {
-            // For security, don't confirm if the email exists or not
-            return ResponseEntity.ok(Map.of("message", "If an account exists, a reset link has been generated."));
+            return ResponseEntity.ok(Map.of("message", "If an account exists, a reset link has been sent."));
         }
     }
 

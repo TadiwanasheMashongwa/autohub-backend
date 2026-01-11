@@ -31,7 +31,7 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        // 1. Ensure all 3 roles exist in the database
+        // 1. Seed Roles
         List.of("ROLE_ADMIN", "ROLE_CLERK", "ROLE_CUSTOMER").forEach(roleName -> {
             if (roleRepository.findByName(roleName).isEmpty()) {
                 roleRepository.save(new Role(null, roleName));
@@ -40,19 +40,18 @@ public class DataInitializer implements CommandLineRunner {
 
         Role adminRole = roleRepository.findByName("ROLE_ADMIN").orElseThrow();
 
-        // 2. Ensure Admin account exists and is linked to ROLE_ADMIN
-        String adminUsername = "admin@autohub.co.zw";
-        userRepository.findByUsername(adminUsername).ifPresentOrElse(
+        // 2. Seed Admin - Lookup by Email
+        String adminEmail = "admin@autohub.co.zw";
+        userRepository.findByEmail(adminEmail).ifPresentOrElse(
                 (existingAdmin) -> {
                     existingAdmin.setPassword(passwordEncoder.encode("password"));
                     existingAdmin.setRole(adminRole);
-                    existingAdmin.setEmail(adminUsername);
                     userRepository.save(existingAdmin);
                 },
                 () -> {
                     User admin = new User();
-                    admin.setUsername(adminUsername);
-                    admin.setEmail(adminUsername);
+                    admin.setUsername("Admin"); // Display name
+                    admin.setEmail(adminEmail);
                     admin.setPassword(passwordEncoder.encode("password"));
                     admin.setRole(adminRole);
                     admin.setFirstName("System");
@@ -61,7 +60,7 @@ public class DataInitializer implements CommandLineRunner {
                 }
         );
 
-        // 3. Seed sample data if empty
+        // 3. Seed Sample Parts
         if (categoryRepository.count() == 0) {
             Category engineCategory = new Category();
             engineCategory.setName("Engine Parts");
@@ -70,8 +69,8 @@ public class DataInitializer implements CommandLineRunner {
             Part oilFilter = new Part();
             oilFilter.setName("Premium Oil Filter");
             oilFilter.setSku("OF-TOY-001");
-            oilFilter.setBarcode("BAR-123456789"); // Added: Mandatory field
-            oilFilter.setStockQuantity(50);        // Added: Mandatory field
+            oilFilter.setBarcode("BAR-123456789");
+            oilFilter.setStockQuantity(50);
             oilFilter.setPrice(new BigDecimal("15.99"));
             oilFilter.setCategory(engineCategory);
             partRepository.save(oilFilter);
