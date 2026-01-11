@@ -46,13 +46,13 @@ public class DataInitializer implements CommandLineRunner {
                 (existingAdmin) -> {
                     existingAdmin.setPassword(passwordEncoder.encode("password"));
                     existingAdmin.setRole(adminRole);
-                    existingAdmin.setEmail(adminUsername); // Ensure email is set on update
+                    existingAdmin.setEmail(adminUsername);
                     userRepository.save(existingAdmin);
                 },
                 () -> {
                     User admin = new User();
                     admin.setUsername(adminUsername);
-                    admin.setEmail(adminUsername); // FIX: Mandatory field now populated
+                    admin.setEmail(adminUsername);
                     admin.setPassword(passwordEncoder.encode("password"));
                     admin.setRole(adminRole);
                     admin.setFirstName("System");
@@ -70,6 +70,8 @@ public class DataInitializer implements CommandLineRunner {
             Part oilFilter = new Part();
             oilFilter.setName("Premium Oil Filter");
             oilFilter.setSku("OF-TOY-001");
+            oilFilter.setBarcode("BAR-123456789"); // Added: Mandatory field
+            oilFilter.setStockQuantity(50);        // Added: Mandatory field
             oilFilter.setPrice(new BigDecimal("15.99"));
             oilFilter.setCategory(engineCategory);
             partRepository.save(oilFilter);
