@@ -5,6 +5,7 @@ import com.autohub.api.auth.AuthenticationService;
 import com.autohub.api.auth.RegisterRequest;
 import com.autohub.api.model.User;
 import com.autohub.api.repository.UserRepository;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -23,10 +24,10 @@ public class AuthenticationController {
     }
 
     /**
-     * NEW: Endpoint for new customers to join AutoHub.
+     * UPDATED: Added @Valid to enforce RegisterRequest constraints.
      */
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
+    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
         try {
             return ResponseEntity.ok(service.register(request));
         } catch (Exception e) {
@@ -65,7 +66,7 @@ public class AuthenticationController {
         String email = request.get("email");
         try {
             service.initiatePasswordReset(email);
-            return ResponseEntity.ok(Map.of("message", "Reset token generated. Check console logs."));
+            return ResponseEntity.ok(Map.of("message", "Reset token generated. Check your inbox."));
         } catch (Exception e) {
             // For security, don't confirm if the email exists or not
             return ResponseEntity.ok(Map.of("message", "If an account exists, a reset link has been generated."));
