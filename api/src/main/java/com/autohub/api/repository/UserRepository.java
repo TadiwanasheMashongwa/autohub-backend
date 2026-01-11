@@ -9,7 +9,8 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByUsername(String username);
 
-    // NEW: Find user by token
+    Optional<User> findByEmail(String email); // Added for Reset Password flow
+
     Optional<User> findByResetToken(String resetToken);
 
     @Query("SELECT u FROM User u WHERE u.role.name = 'ROLE_CUSTOMER'")

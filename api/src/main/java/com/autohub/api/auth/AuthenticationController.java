@@ -1,4 +1,4 @@
-package com.autohub.api.controller;
+package com.autohub.api.auth;
 
 import com.autohub.api.auth.AuthenticationResponse;
 import com.autohub.api.auth.AuthenticationService;

@@ -5,6 +5,7 @@ import com.autohub.api.model.Role;
 import com.autohub.api.repository.UserRepository;
 import com.autohub.api.repository.RoleRepository;
 import com.autohub.api.service.JwtService;
+import com.autohub.api.service.EmailService;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -21,6 +22,7 @@ public class AuthenticationService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService; // Ensure this is injected
 
     private final Set<String> tokenBlacklist = new HashSet<>();
 
@@ -28,18 +30,21 @@ public class AuthenticationService {
                                  RoleRepository roleRepository,
                                  PasswordEncoder passwordEncoder,
                                  JwtService jwtService,
-                                 AuthenticationManager authenticationManager) {
+                                 AuthenticationManager authenticationManager,
+                                 EmailService emailService) {
         this.repository = repository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.authenticationManager = authenticationManager;
+        this.emailService = emailService;
     }
 
     public AuthenticationResponse register(RegisterRequest request) {
         Role userRole = roleRepository.findByName("ROLE_CUSTOMER").orElseThrow();
         User user = new User();
         user.setUsername(request.getUsername());
+        user.setEmail(request.getEmail()); // Now saving email
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(userRole);
         user.setFirstName(request.getFirstName());
@@ -93,6 +98,7 @@ public class AuthenticationService {
                 .orElseThrow(() -> new RuntimeException("Role not found: " + roleName));
         User user = new User();
         user.setUsername(request.getUsername());
+        user.setEmail(request.getEmail()); // Now saving email for internal users too
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(targetRole);
         user.setFirstName(request.getFirstName());
@@ -100,25 +106,21 @@ public class AuthenticationService {
         return repository.save(user);
     }
 
-    /**
-     * NEW: Initiates the password reset process.
-     */
-    public void initiatePasswordReset(String username) {
-        User user = repository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    public void initiatePasswordReset(String email) {
+        // Now finding by EMAIL
+        User user = repository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
 
         String token = UUID.randomUUID().toString();
         user.setResetToken(token);
-        user.setResetTokenExpiry(LocalDateTime.now().plusMinutes(15)); // 15-minute window
+        user.setResetTokenExpiry(LocalDateTime.now().plusMinutes(15));
         repository.save(user);
 
-        // Log the token for now since we haven't integrated an Email Service yet
-        System.out.println(">>> RESET TOKEN for " + username + ": " + token);
+        // Send the real email
+        emailService.sendPasswordResetEmail(user.getEmail(), token);
+        System.out.println(">>> SUCCESS: Reset email sent to " + email);
     }
 
-    /**
-     * NEW: Completes the password reset process.
-     */
     public void completePasswordReset(String token, String newPassword) {
         User user = repository.findByResetToken(token)
                 .orElseThrow(() -> new RuntimeException("Invalid reset token"));
