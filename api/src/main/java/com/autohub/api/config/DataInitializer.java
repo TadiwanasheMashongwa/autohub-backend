@@ -41,15 +41,18 @@ public class DataInitializer implements CommandLineRunner {
         Role adminRole = roleRepository.findByName("ROLE_ADMIN").orElseThrow();
 
         // 2. Ensure Admin account exists and is linked to ROLE_ADMIN
-        userRepository.findByUsername("admin@autohub.co.zw").ifPresentOrElse(
+        String adminUsername = "admin@autohub.co.zw";
+        userRepository.findByUsername(adminUsername).ifPresentOrElse(
                 (existingAdmin) -> {
                     existingAdmin.setPassword(passwordEncoder.encode("password"));
                     existingAdmin.setRole(adminRole);
+                    existingAdmin.setEmail(adminUsername); // Ensure email is set on update
                     userRepository.save(existingAdmin);
                 },
                 () -> {
                     User admin = new User();
-                    admin.setUsername("admin@autohub.co.zw");
+                    admin.setUsername(adminUsername);
+                    admin.setEmail(adminUsername); // FIX: Mandatory field now populated
                     admin.setPassword(passwordEncoder.encode("password"));
                     admin.setRole(adminRole);
                     admin.setFirstName("System");
