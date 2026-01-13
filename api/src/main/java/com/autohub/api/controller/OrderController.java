@@ -42,29 +42,27 @@ public class OrderController {
     }
 
     @GetMapping("/all")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CLERK')")
     public ResponseEntity<List<Order>> getAllOrders() {
         return ResponseEntity.ok(orderService.getAllOrders());
     }
 
     @PostMapping("/{id}/confirm-receipt")
     public ResponseEntity<Order> confirmReceipt(@PathVariable Long id, Authentication authentication) {
+        // Validation: Ensure the user owns this order
         Order order = orderService.getOrderByIdSecurely(id, authentication.getName());
 
         if (order.getStatus() != OrderStatus.SHIPPED && order.getStatus() != OrderStatus.IN_TRANSIT) {
             throw new RuntimeException("Order must be SHIPPED or IN_TRANSIT before you can confirm receipt.");
         }
 
+        // Final transition to COMPLETED/DELIVERED
         return ResponseEntity.ok(orderService.updateStatus(id, OrderStatus.COMPLETED));
     }
 
-    /**
-     * PHASE 6: Order Cancellation.
-     * New: Matches Audit item #7. Allows a user to cancel a PENDING order.
-     */
     @PostMapping("/cancel/{id}")
     public ResponseEntity<Order> cancelOrder(@PathVariable Long id, Authentication authentication) {
-        // Validation of ownership happens inside getOrderByIdSecurely
+        // Validation: Verify ownership via secure lookup
         Order order = orderService.getOrderByIdSecurely(id, authentication.getName());
         return ResponseEntity.ok(orderService.cancelOrder(order.getId()));
     }

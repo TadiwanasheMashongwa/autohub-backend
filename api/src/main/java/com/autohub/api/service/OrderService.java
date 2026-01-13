@@ -15,10 +15,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-/**
- * CORE ORCHESTRATOR: Manages Order Lifecycle, Warehouse Picking, and Financials.
- * Synchronized with Master 53-endpoint list (v10.4.6).
- */
 @Service
 public class OrderService {
     private final OrderRepository orderRepository;
@@ -46,9 +42,51 @@ public class OrderService {
     }
 
     /**
-     * PHASE 6: Checkout Logic with Idempotency Support.
-     * ENDPOINT #39: Prevents duplicate orders during network flickers.
+     * FIX: Secure Order Lookup.
+     * Validates ownership or administrative privileges.
      */
+    public Order getOrderByIdSecurely(Long id, String email) {
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Order not found with ID: " + id));
+
+        boolean isAdmin = SecurityContextHolder.getContext().getAuthentication().getAuthorities()
+                .stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_CLERK"));
+
+        if (!isAdmin && !order.getUser().getEmail().equals(email)) {
+            throw new RuntimeException("Access Denied: You do not own this order.");
+        }
+        return order;
+    }
+
+    /**
+     * FIX: Status Update logic with Email Triggers.
+     */
+    @Transactional
+    public Order updateStatus(Long orderId, OrderStatus status) {
+        Order order = orderRepository.findById(orderId).orElseThrow();
+        order.setStatus(status);
+
+        if (status == OrderStatus.DELIVERED || status == OrderStatus.COMPLETED) {
+            order.setDeliveryDate(LocalDateTime.now());
+            emailService.sendDeliveryConfirmation(order);
+        }
+        return orderRepository.save(order);
+    }
+
+    /**
+     * FIX: Order Cancellation logic.
+     */
+    @Transactional
+    public Order cancelOrder(Long id) {
+        Order order = orderRepository.findById(id).orElseThrow();
+        if (order.getStatus() != OrderStatus.PENDING) {
+            throw new RuntimeException("Only pending orders can be cancelled.");
+        }
+        order.setStatus(OrderStatus.CANCELLED);
+        auditLogRepository.save(new AuditLog("ORDER_CANCELLED", "USER", "Order #" + id));
+        return orderRepository.save(order);
+    }
+
     @Transactional
     public Order checkoutCart(User user, String idempotencyKey) {
         if (idempotencyKey != null) {
@@ -70,7 +108,7 @@ public class OrderService {
             OrderItem oi = new OrderItem();
             oi.setPart(ci.getPart());
             oi.setQuantity(ci.getQuantity());
-            oi.setPickedQuantity(0); // Initialize for warehouse flow
+            oi.setPickedQuantity(0);
             orderItems.add(oi);
         }
 
@@ -78,42 +116,31 @@ public class OrderService {
         cart.getItems().clear();
         cart.setAppliedCoupon(null);
 
-        // TRIGGER 1: Order Received Email (#1.6)
         emailService.sendOrderReceivedEmail(order);
 
         if (idempotencyKey != null) {
             try {
                 String responseBody = objectMapper.writeValueAsString(order);
                 idempotencyRepository.save(new IdempotencyRecord(idempotencyKey, responseBody, 200));
-            } catch (Exception e) { /* Log locally */ }
+            } catch (Exception e) { }
         }
         return order;
     }
 
-    /**
-     * PHASE 4: Payment Confirmation & Stock Release.
-     * Triggered after successful payment gateway callback.
-     */
     @Transactional
     public Order confirmPayment(Long orderId, String paymentId) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
-
+        Order order = orderRepository.findById(orderId).orElseThrow();
         if (order.getStatus() != OrderStatus.PENDING) {
-            throw new RuntimeException("Cannot confirm payment. Status is: " + order.getStatus());
+            throw new RuntimeException("Cannot confirm payment for non-pending order.");
         }
 
-        // Atomically deduct stock
         for (OrderItem item : order.getItems()) {
             Part part = partRepository.findById(item.getPart().getId()).orElseThrow();
-
             if (part.getStockQuantity() < item.getQuantity()) {
-                throw new RuntimeException("Inventory exhausted for SKU: " + part.getSku());
+                throw new RuntimeException("Stock sold out for SKU: " + part.getSku());
             }
-
             part.setStockQuantity(part.getStockQuantity() - item.getQuantity());
             partRepository.save(part);
-            auditLogRepository.save(new AuditLog("STOCK_DEDUCTION", "SYSTEM", "Order #" + orderId));
         }
 
         order.setPaymentId(paymentId);
@@ -121,43 +148,34 @@ public class OrderService {
         order.setStatus(OrderStatus.COMPLETED);
 
         Order savedOrder = orderRepository.save(order);
-        emailService.sendOrderConfirmation(savedOrder); // TRIGGER 2
+        emailService.sendOrderConfirmation(savedOrder);
         return savedOrder;
     }
 
-    /**
-     * ENDPOINT #44: Warehouse Picking Verification.
-     * Ensures Clerks pull the correct barcode before order can ship.
-     */
     @Transactional
     public Order verifyAndPickItem(Long orderId, String barcode) {
         Order order = orderRepository.findById(orderId).orElseThrow();
         OrderItem item = order.getItems().stream()
                 .filter(i -> i.getPart().getBarcode().equals(barcode))
                 .findFirst()
-                .orElseThrow(() -> new RuntimeException("Barcode does not match any item in this order."));
+                .orElseThrow(() -> new RuntimeException("Barcode mismatch."));
 
         if (item.getPickedQuantity() >= item.getQuantity()) {
-            throw new RuntimeException("Item already fully picked.");
+            throw new RuntimeException("Quantity already picked.");
         }
 
         item.setPickedQuantity(item.getPickedQuantity() + 1);
         String clerk = SecurityContextHolder.getContext().getAuthentication().getName();
-        auditLogRepository.save(new AuditLog("WAREHOUSE_PICK", clerk, "Order #" + orderId + " - Item: " + barcode));
+        auditLogRepository.save(new AuditLog("WAREHOUSE_PICK", clerk, "Picked unit for Order #" + orderId));
         return orderRepository.save(order);
     }
 
-    /**
-     * ENDPOINT #45: Ship Order logic.
-     */
     @Transactional
     public Order shipOrder(Long id, String courier, String tracking) {
         Order order = orderRepository.findById(id).orElseThrow();
-
-        // Safety Guard: Require picking to be 100% complete
         boolean allPicked = order.getItems().stream()
                 .allMatch(i -> i.getPickedQuantity() != null && i.getPickedQuantity().equals(i.getQuantity()));
-        if (!allPicked) throw new RuntimeException("Picking incomplete. Cannot ship.");
+        if (!allPicked) throw new RuntimeException("Picking incomplete.");
 
         order.setStatus(OrderStatus.SHIPPED);
         order.setCourierName(courier);
@@ -165,19 +183,15 @@ public class OrderService {
         order.setShippedDate(LocalDateTime.now());
 
         Order savedOrder = orderRepository.save(order);
-        emailService.sendShippingNotification(savedOrder); // TRIGGER 3
+        emailService.sendShippingNotification(savedOrder);
         return savedOrder;
     }
 
-    /**
-     * ENDPOINT #49: Process Refund with Optional Restocking.
-     */
     @Transactional
     public Order processRefund(Long id, BigDecimal amount, boolean restock) {
         Order o = orderRepository.findById(id).orElseThrow();
         o.setRefundedAmount(amount);
         o.setStatus(OrderStatus.REFUNDED);
-
         if (restock) {
             for (OrderItem i : o.getItems()) {
                 Part p = i.getPart();
@@ -185,21 +199,15 @@ public class OrderService {
                 partRepository.save(p);
             }
         }
-        auditLogRepository.save(new AuditLog("REFUND_ISSUED", "ADMIN", "Order #" + id + ": $" + amount));
         return orderRepository.save(o);
     }
 
-    /**
-     * ENDPOINT #51: Dashboard Financial Aggregation.
-     */
     public BigDecimal calculateTotalRevenue() {
         return orderRepository.findAll().stream()
                 .filter(o -> List.of(OrderStatus.DELIVERED, OrderStatus.COMPLETED, OrderStatus.SHIPPED).contains(o.getStatus()))
                 .map(o -> o.getTotalAmount().subtract(o.getRefundedAmount()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
-
-    // --- SUPPORTING LOGIC ---
 
     @Transactional
     public Order transitOrder(Long orderId) {
@@ -211,21 +219,17 @@ public class OrderService {
     public long getTotalOrderCount() { return orderRepository.count(); }
     public List<Order> getAllOrders() { return orderRepository.findAll(); }
     public List<Order> getOrdersByUser(User u) { return orderRepository.findByUser(u); }
-    public Map<String, Object> getOrderManifest(Long id) {
-        return shippingService.generateManifest(orderRepository.findById(id).orElseThrow());
-    }
+    public Map<String, Object> getOrderManifest(Long id) { return shippingService.generateManifest(orderRepository.findById(id).orElseThrow()); }
 
     private Order createOrderWithCoupon(User user, List<OrderItem> items, Coupon coupon) {
         Order order = new Order();
         order.setUser(user);
         BigDecimal subtotal = BigDecimal.ZERO;
-
         for (OrderItem item : items) {
             Part part = partRepository.findById(item.getPart().getId()).orElseThrow();
             item.setPriceAtPurchase(part.getPrice());
             subtotal = subtotal.add(part.getPrice().multiply(new BigDecimal(item.getQuantity())));
         }
-
         BigDecimal discount = BigDecimal.ZERO;
         if (coupon != null && subtotal.compareTo(coupon.getMinSpend()) >= 0) {
             discount = "PERCENTAGE".equals(coupon.getDiscountType())
@@ -233,7 +237,6 @@ public class OrderService {
                     : coupon.getDiscountValue();
             order.setCouponCode(coupon.getCode());
         }
-
         order.setItems(items);
         order.setDiscountAmount(discount);
         order.setTotalAmount(subtotal.subtract(discount));
