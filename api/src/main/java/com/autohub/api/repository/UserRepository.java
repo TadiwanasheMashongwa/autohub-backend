@@ -12,20 +12,32 @@ import java.util.Optional;
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
 
-    // Core Lookups
+    /**
+     * Supports Security Stack: Standard username lookup.
+     */
     Optional<User> findByUsername(String username);
+
+    /**
+     * CORE LOOKUP: Used by JWT authentication filter.
+     * Since we use email for identity, this is the most-called method.
+     */
     Optional<User> findByEmail(String email);
+
+    /**
+     * Supports Phase 6: Password Recovery.
+     */
     Optional<User> findByResetToken(String resetToken);
 
     /**
-     * FIX: Navigates the User -> Role relationship to count users by role name.
-     * This is required for the Admin Dashboard stats.
+     * AUDIT #11.2: Admin Dashboard Statistics.
+     * Navigates the User -> Role relationship to provide real-time counts.
      */
     @Query("SELECT COUNT(u) FROM User u WHERE u.role.name = :roleName")
     long countByRoleName(@Param("roleName") String roleName);
 
     /**
-     * FIX: Returns a list of all users with the CUSTOMER role.
+     * AUDIT #11.3: Customer Management.
+     * Returns a list of all users specifically with the CUSTOMER role.
      */
     @Query("SELECT u FROM User u WHERE u.role.name = 'ROLE_CUSTOMER'")
     List<User> findAllCustomers();
