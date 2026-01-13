@@ -25,25 +25,42 @@ public class CartService {
         this.partRepository = partRepository;
     }
 
+    /**
+     * AUDIT #2.1: Retrieve the user's cart or create a new one.
+     */
     public Cart getCart(User user) {
         return cartRepository.findByUser(user)
                 .orElseGet(() -> cartRepository.save(new Cart(user)));
     }
 
+    /**
+     * AUDIT #2.2: Add item to cart with stock validation.
+     */
     @Transactional
     public Cart addItemToCart(User user, Long partId, Integer quantity) {
         Cart cart = getCart(user);
         Part part = partRepository.findById(partId)
-                .orElseThrow(() -> new RuntimeException("Part not found"));
+                .orElseThrow(() -> new RuntimeException("Part not found with ID: " + partId));
 
-        // Check if item already exists in cart
+        // NEW: Phase 3 Stock Validation
+        // Ensures Mike doesn't oversell parts that aren't in the warehouse.
+        if (part.getStockQuantity() < quantity) {
+            throw new RuntimeException("Insufficient stock. Only " + part.getStockQuantity() + " units available.");
+        }
+
         Optional<CartItem> existingItem = cart.getItems().stream()
                 .filter(item -> item.getPart().getId().equals(partId))
                 .findFirst();
 
         if (existingItem.isPresent()) {
             CartItem item = existingItem.get();
-            item.setQuantity(item.getQuantity() + quantity);
+            int newQuantity = item.getQuantity() + quantity;
+
+            // Re-validate total quantity against stock
+            if (part.getStockQuantity() < newQuantity) {
+                throw new RuntimeException("Cannot add more. Total in cart would exceed stock levels.");
+            }
+            item.setQuantity(newQuantity);
         } else {
             CartItem newItem = new CartItem();
             newItem.setCart(cart);
@@ -55,6 +72,9 @@ public class CartService {
         return cartRepository.save(cart);
     }
 
+    /**
+     * AUDIT #2.3: Remove specific item.
+     */
     @Transactional
     public Cart removeItemFromCart(User user, Long cartItemId) {
         Cart cart = getCart(user);
@@ -62,6 +82,9 @@ public class CartService {
         return cartRepository.save(cart);
     }
 
+    /**
+     * AUDIT #2.4: Clear cart entirely.
+     */
     @Transactional
     public void clearCart(User user) {
         Cart cart = getCart(user);
