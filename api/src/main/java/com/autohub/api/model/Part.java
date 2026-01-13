@@ -39,9 +39,11 @@ public class Part {
   private String brand;
   private String condition;
   private String imageUrl;
-
-  // NEW: Physical location in the warehouse (e.g., "Aisle 4, Shelf B1")
   private String binLocation;
+
+  // NEW: Logistics Fields for Phase 5
+  private Double weight; // In Kilograms (kg)
+  private String dimensions; // e.g., "20x20x10 cm"
 
   @ManyToOne
   @JoinColumn(name = "category_id")
@@ -67,41 +69,43 @@ public class Part {
 
   public Part() {}
 
-  // --- GETTERS ---
+  // --- GETTERS & SETTERS (Full) ---
   public Long getId() { return id; }
-  public String getName() { return name; }
-  public String getSku() { return sku; }
-  public String getBarcode() { return barcode; }
-  public String getOemNumber() { return oemNumber; }
-  public String getDescription() { return description; }
-  public BigDecimal getPrice() { return price; }
-  public Integer getStockQuantity() { return stockQuantity; }
-  public String getBrand() { return brand; }
-  public String getCondition() { return condition; }
-  public String getImageUrl() { return imageUrl; }
-  public String getBinLocation() { return binLocation; } // NEW
-  public Category getCategory() { return category; }
-  public List<Review> getReviews() { return reviews; }
-  public Double getAverageRating() { return averageRating; }
-  public List<Vehicle> getCompatibleVehicles() { return compatibleVehicles; }
-  public Long getVersion() { return version; }
-
-  // --- SETTERS ---
   public void setId(Long id) { this.id = id; }
+  public String getName() { return name; }
   public void setName(String name) { this.name = name; }
+  public String getSku() { return sku; }
   public void setSku(String sku) { this.sku = sku; }
+  public String getBarcode() { return barcode; }
   public void setBarcode(String barcode) { this.barcode = barcode; }
+  public String getOemNumber() { return oemNumber; }
   public void setOemNumber(String oemNumber) { this.oemNumber = oemNumber; }
+  public String getDescription() { return description; }
   public void setDescription(String description) { this.description = description; }
+  public BigDecimal getPrice() { return price; }
   public void setPrice(BigDecimal price) { this.price = price; }
+  public Integer getStockQuantity() { return stockQuantity; }
   public void setStockQuantity(Integer stockQuantity) { this.stockQuantity = stockQuantity; }
+  public String getBrand() { return brand; }
   public void setBrand(String brand) { this.brand = brand; }
+  public String getCondition() { return condition; }
   public void setCondition(String condition) { this.condition = condition; }
+  public String getImageUrl() { return imageUrl; }
   public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
-  public void setBinLocation(String binLocation) { this.binLocation = binLocation; } // NEW
+  public String getBinLocation() { return binLocation; }
+  public void setBinLocation(String binLocation) { this.binLocation = binLocation; }
+  public Double getWeight() { return weight; }
+  public void setWeight(Double weight) { this.weight = weight; }
+  public String getDimensions() { return dimensions; }
+  public void setDimensions(String dimensions) { this.dimensions = dimensions; }
+  public Category getCategory() { return category; }
   public void setCategory(Category category) { this.category = category; }
+  public List<Review> getReviews() { return reviews; }
   public void setReviews(List<Review> reviews) { this.reviews = reviews; }
+  public Double getAverageRating() { return averageRating; }
   public void setAverageRating(Double averageRating) { this.averageRating = averageRating; }
+  public List<Vehicle> getCompatibleVehicles() { return compatibleVehicles; }
   public void setCompatibleVehicles(List<Vehicle> compatibleVehicles) { this.compatibleVehicles = compatibleVehicles; }
+  public Long getVersion() { return version; }
   public void setVersion(Long version) { this.version = version; }
 }
