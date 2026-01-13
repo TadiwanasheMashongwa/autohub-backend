@@ -42,8 +42,8 @@ public class OrderService {
     }
 
     /**
-     * FIX: Secure Order Lookup.
-     * Validates ownership or administrative privileges.
+     * SECURE LOOKUP: Validates ownership or administrative privileges.
+     * Used by OrderController to prevent unauthorized access to order data.
      */
     public Order getOrderByIdSecurely(Long id, String email) {
         Order order = orderRepository.findById(id)
@@ -59,7 +59,7 @@ public class OrderService {
     }
 
     /**
-     * FIX: Status Update logic with Email Triggers.
+     * STATUS MANAGEMENT: Handles transitions and triggers customer notifications.
      */
     @Transactional
     public Order updateStatus(Long orderId, OrderStatus status) {
@@ -74,7 +74,7 @@ public class OrderService {
     }
 
     /**
-     * FIX: Order Cancellation logic.
+     * CANCELLATION: Allows users to cancel PENDING orders only.
      */
     @Transactional
     public Order cancelOrder(Long id) {
@@ -152,6 +152,9 @@ public class OrderService {
         return savedOrder;
     }
 
+    /**
+     * WAREHOUSE PICKING: Validates item barcode against order content.
+     */
     @Transactional
     public Order verifyAndPickItem(Long orderId, String barcode) {
         Order order = orderRepository.findById(orderId).orElseThrow();
@@ -170,6 +173,9 @@ public class OrderService {
         return orderRepository.save(order);
     }
 
+    /**
+     * LOGISTICS: Finalizes shipping details.
+     */
     @Transactional
     public Order shipOrder(Long id, String courier, String tracking) {
         Order order = orderRepository.findById(id).orElseThrow();
@@ -202,6 +208,9 @@ public class OrderService {
         return orderRepository.save(o);
     }
 
+    /**
+     * ANALYTICS: Calculates Net Revenue for the Admin Dashboard.
+     */
     public BigDecimal calculateTotalRevenue() {
         return orderRepository.findAll().stream()
                 .filter(o -> List.of(OrderStatus.DELIVERED, OrderStatus.COMPLETED, OrderStatus.SHIPPED).contains(o.getStatus()))
