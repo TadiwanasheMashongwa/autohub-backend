@@ -13,7 +13,8 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
 
     /**
      * OPTIMIZATION: Uses JOIN FETCH to load the cart and its items in one query.
-     * This prevents the N+1 performance issue when displaying the cart.
+     * Prevents N+1 performance issues when calculating cart totals or displaying UI.
+     * This is essential for Phase 2: Checkout reliability.
      */
     @Query("SELECT c FROM Cart c LEFT JOIN FETCH c.items WHERE c.user = :user")
     Optional<Cart> findByUser(@Param("user") User user);

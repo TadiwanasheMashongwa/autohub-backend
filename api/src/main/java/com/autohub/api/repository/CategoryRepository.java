@@ -7,6 +7,10 @@ import java.util.Optional;
 
 @Repository
 public interface CategoryRepository extends JpaRepository<Category, Long> {
-    // Required for the unique name validation in CategoryService
+
+    /**
+     * Required for Catalog Management.
+     * Ensures we don't create duplicate categories (e.g., 'Brakes' and 'BRAKES').
+     */
     Optional<Category> findByName(String name);
 }
