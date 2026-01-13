@@ -19,28 +19,43 @@ public class CategoryController {
         this.categoryService = categoryService;
     }
 
+    /**
+     * AUDIT #8.1: Browse all categories.
+     */
     @GetMapping
     public List<Category> getAllCategories() {
         return categoryService.getAllCategories();
     }
 
+    /**
+     * AUDIT #8.3: Get specific category details.
+     */
     @GetMapping("/{id}")
     public ResponseEntity<Category> getCategoryById(@PathVariable Long id) {
         return ResponseEntity.ok(categoryService.getCategoryById(id));
     }
 
+    /**
+     * AUDIT #8.2: Create a new category (e.g., "Engine Parts", "Suspension").
+     */
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Category> createCategory(@Valid @RequestBody Category category) {
         return new ResponseEntity<>(categoryService.createCategory(category), HttpStatus.CREATED);
     }
 
+    /**
+     * AUDIT #8.4: Update category metadata.
+     */
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Category> updateCategory(@PathVariable Long id, @Valid @RequestBody Category category) {
         return ResponseEntity.ok(categoryService.updateCategory(id, category));
     }
 
+    /**
+     * AUDIT #8.5: Delete category.
+     */
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteCategory(@PathVariable Long id) {
