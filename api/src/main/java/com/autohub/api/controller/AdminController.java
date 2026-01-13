@@ -10,6 +10,7 @@ import com.autohub.api.service.OrderService;
 import com.autohub.api.service.PartService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -38,8 +39,7 @@ public class AdminController {
     }
 
     /**
-     * UPDATED: Allows the Admin to create a Clerk account.
-     * Uses the restored createInternalUser method with Auto-Username logic.
+     * Allows the Admin to create a Clerk account.
      */
     @PostMapping("/create-clerk")
     public ResponseEntity<?> createClerk(@RequestBody RegisterRequest request) {
@@ -61,6 +61,7 @@ public class AdminController {
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalRevenue", orderService.calculateTotalRevenue());
         stats.put("totalOrders", orderService.getTotalOrderCount());
+        // Note: countByRoleName will be fixed in Step 3
         stats.put("totalCustomers", userRepository.countByRoleName("ROLE_CUSTOMER"));
         stats.put("lowStockCount", partService.getLowStockPartsList(5).size());
         return ResponseEntity.ok(stats);
@@ -97,5 +98,14 @@ public class AdminController {
     @GetMapping("/customers")
     public ResponseEntity<List<User>> getAllCustomers() {
         return ResponseEntity.ok(userRepository.findAllCustomers());
+    }
+
+    /**
+     * Helper to get User by Email from the Authentication context.
+     */
+    private User getUserFromAuth(Authentication authentication) {
+        // FIX: Standardized to findByEmail
+        return userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new RuntimeException("Admin not found with email: " + authentication.getName()));
     }
 }

@@ -12,10 +12,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
-/**
- * REST Controller for managing product reviews.
- * Workflow v2.8: Supports Decimal Ratings and Duplicate Prevention.
- */
 @RestController
 @RequestMapping("/api/v1/reviews")
 public class ReviewController {
@@ -32,10 +28,8 @@ public class ReviewController {
 
     @PostMapping("/add")
     public ResponseEntity<Review> addReview(@RequestBody Map<String, Object> payload, Authentication authentication) {
-        User user = userRepository.findByUsername(authentication.getName())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = getUserFromAuth(authentication);
 
-        // Safe extraction for Long and Double types
         Long partId = Long.valueOf(payload.get("partId").toString());
         Double rating = Double.valueOf(payload.get("rating").toString());
         String comment = (String) payload.get("comment");
@@ -46,5 +40,11 @@ public class ReviewController {
     @GetMapping("/part/{partId}")
     public ResponseEntity<List<Review>> getReviewsByPart(@PathVariable Long partId) {
         return ResponseEntity.ok(reviewRepository.findByPartId(partId));
+    }
+
+    private User getUserFromAuth(Authentication authentication) {
+        // FIX: Changed from findByUsername to findByEmail to match JWT principal
+        return userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new RuntimeException("User not found with email: " + authentication.getName()));
     }
 }

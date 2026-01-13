@@ -49,7 +49,8 @@ public class CartController {
     }
 
     private User getUserFromAuth(Authentication authentication) {
-        return userRepository.findByUsername(authentication.getName())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        // FIX: Changed from findByUsername to findByEmail to match JWT principal
+        return userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new RuntimeException("User not found with email: " + authentication.getName()));
     }
 }

@@ -47,22 +47,17 @@ public class OrderController {
         return ResponseEntity.ok(orderService.getAllOrders());
     }
 
-    // --- CUSTOMER ACTION: CONFIRM RECEIPT ---
     @PostMapping("/{id}/confirm-receipt")
     public ResponseEntity<Order> confirmReceipt(@PathVariable Long id, Authentication authentication) {
-        // 1. Verify ownership and existence
         Order order = orderService.getOrderByIdSecurely(id, authentication.getName());
 
-        // 2. Business Logic: Only shipped orders can be confirmed
         if (order.getStatus() != OrderStatus.SHIPPED) {
             throw new RuntimeException("Order must be SHIPPED before you can confirm receipt.");
         }
 
-        // 3. Automate the completion
         return ResponseEntity.ok(orderService.updateStatus(id, OrderStatus.COMPLETED));
     }
 
-    // --- ADMIN ACTION: MANUAL OVERRIDE ---
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Order> updateOrderStatus(@PathVariable Long id, @RequestParam OrderStatus status) {
@@ -70,7 +65,8 @@ public class OrderController {
     }
 
     private User getUserFromAuth(Authentication authentication) {
-        return userRepository.findByUsername(authentication.getName())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        // FIX: Changed from findByUsername to findByEmail to match JWT principal
+        return userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new RuntimeException("User not found with email: " + authentication.getName()));
     }
 }
