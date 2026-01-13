@@ -14,12 +14,19 @@ import java.util.Optional;
 @Repository
 public interface PartRepository extends JpaRepository<Part, Long> {
 
+    /**
+     * Supports Endpoint #18 & #24: Barcode lookups for Warehouse Clerks.
+     */
     Optional<Part> findByBarcode(String barcode);
 
+    /**
+     * Standard SKU lookup for internal inventory audits.
+     */
     Optional<Part> findBySku(String sku);
 
     /**
-     * Supports Advanced Search: Matches name, brand, SKU, or OEM numbers.
+     * AUDIT #3.2: Advanced Catalog Search.
+     * Matches name, brand, SKU, or OEM numbers using case-insensitive partial matching.
      */
     @Query("SELECT p FROM Part p WHERE " +
             "LOWER(p.name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
@@ -29,29 +36,32 @@ public interface PartRepository extends JpaRepository<Part, Long> {
     Page<Part> searchParts(@Param("query") String query, Pageable pageable);
 
     /**
-     * Supports Category browsing.
+     * Supports Endpoint #19: Browse by Category.
      */
     Page<Part> findByCategoryId(Long categoryId, Pageable pageable);
 
     /**
-     * Supports Brand filtering.
+     * Supports Brand filtering for the frontend sidebar.
      */
     Page<Part> findByBrandIgnoreCase(String brand, Pageable pageable);
 
     /**
-     * PHASE 3: Warehouse & Admin Low Stock Reporting.
+     * AUDIT #3.5 / Endpoint #26: Low Stock Reporting.
+     * Identifies parts requiring immediate restock for the Admin Dashboard.
      */
     Page<Part> findByStockQuantityLessThan(int threshold, Pageable pageable);
 
     /**
-     * PHASE 3: Vehicle Fitment/Compatibility lookup.
+     * AUDIT #5.1 / Endpoint #21: Vehicle Fitment/Compatibility lookup.
+     * Ensures customers only see parts that fit their specific vehicle ID.
      */
     Page<Part> findByCompatibleVehiclesId(Long vehicleId, Pageable pageable);
 
     /**
-     * NATIVE FIX: Direct SQL update to force the change into the database
-     * without Hibernate's version/dirty checking interference.
-     * Essential for the Review/Rating sync logic.
+     * PHASE 4 PERFORMANCE FIX:
+     * Directly updates the average rating via Native SQL.
+     * This bypasses Hibernate's dirty-checking and Versioning to avoid
+     * OptimisticLockExceptions when multiple reviews arrive at once.
      */
     @Modifying
     @Transactional
