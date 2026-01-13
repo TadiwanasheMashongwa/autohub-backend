@@ -6,4 +6,9 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface IdempotencyRepository extends JpaRepository<IdempotencyRecord, String> {
+    /**
+     * Supports Phase 6: Reliability.
+     * Stores unique Idempotency-Keys to prevent duplicate order creation
+     * during checkout or payment processing.
+     */
 }
