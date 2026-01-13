@@ -6,6 +6,7 @@ import com.autohub.api.repository.UserRepository;
 import com.autohub.api.repository.RoleRepository;
 import com.autohub.api.service.JwtService;
 import com.autohub.api.service.EmailService;
+import com.autohub.api.service.MfaService; // New Import
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -23,23 +24,25 @@ public class AuthenticationService {
     private final AuthenticationManager authenticationManager;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
-
-    private final Set<String> tokenBlacklist = new HashSet<>();
+    private final MfaService mfaService; // Injected Service
 
     public AuthenticationService(UserRepository repository,
                                  RoleRepository roleRepository,
                                  PasswordEncoder passwordEncoder,
                                  JwtService jwtService,
                                  AuthenticationManager authenticationManager,
-                                 EmailService emailService) {
+                                 EmailService emailService,
+                                 MfaService mfaService) {
         this.repository = repository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.authenticationManager = authenticationManager;
         this.emailService = emailService;
+        this.mfaService = mfaService;
     }
 
+    // UPDATED: Registration logic remains same but ensures internal consistency
     public AuthenticationResponse register(RegisterRequest request) {
         if (repository.findByEmail(request.getEmail()).isPresent()) {
             throw new RuntimeException("An account with this email already exists.");
@@ -47,19 +50,12 @@ public class AuthenticationService {
 
         Role userRole = roleRepository.findByName("ROLE_CUSTOMER").orElseThrow();
         User user = new User();
-
-        // Map identity & security
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(userRole);
-
-        // Profile details
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
-
-        // AUTO-GENERATE USERNAME
         user.setUsername(request.getFirstName() + " " + request.getLastName());
-
         user.setPhoneNumber(request.getPhoneNumber());
         user.setBusinessName(request.getBusinessName());
         user.setAddress(request.getAddress());
@@ -68,35 +64,37 @@ public class AuthenticationService {
         return generateTokenForUser(user);
     }
 
-    /**
-     * RESTORED: For AdminController to create internal accounts (Admins/Clerks).
-     */
-    public User createInternalUser(RegisterRequest request, String roleName) {
-        Role targetRole = roleRepository.findByName(roleName)
-                .orElseThrow(() -> new RuntimeException("Role not found: " + roleName));
-
-        User user = new User();
-        user.setEmail(request.getEmail());
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setRole(targetRole);
-        user.setFirstName(request.getFirstName());
-        user.setLastName(request.getLastName());
-
-        // Consistent Username Logic
-        user.setUsername(request.getFirstName() + " " + request.getLastName());
-
-        user.setPhoneNumber(request.getPhoneNumber());
-        user.setBusinessName(request.getBusinessName());
-        user.setAddress(request.getAddress());
-
-        return repository.save(user);
-    }
-
+    // UPDATED: Login flow now handles MFA checks
     public AuthenticationResponse authenticate(RegisterRequest request) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
         User user = repository.findByEmail(request.getEmail()).orElseThrow();
+
+        // If MFA is enabled, we DO NOT return the tokens yet.
+        // We return a response that tells the frontend to show the MFA input.
+        if (user.isMfaEnabled()) {
+            AuthenticationResponse mfaResponse = new AuthenticationResponse();
+            mfaResponse.setRole(user.getRole().getName());
+            mfaResponse.setUsername(user.getEmail());
+            mfaResponse.setAccessToken("MFA_REQUIRED"); // Sentinel value for frontend
+            return mfaResponse;
+        }
+
+        return generateTokenForUser(user);
+    }
+
+    /**
+     * NEW: Verification method for the 2nd Factor
+     */
+    public AuthenticationResponse verifyMfa(String email, String code) {
+        User user = repository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (!mfaService.verifyCode(user.getMfaSecret(), code)) {
+            throw new RuntimeException("Invalid MFA code");
+        }
+
         return generateTokenForUser(user);
     }
 
@@ -112,6 +110,21 @@ public class AuthenticationService {
                 user.getRole().getName(),
                 user.getEmail()
         );
+    }
+
+    // RESTORED: Internal user creation for Clerks/Admins
+    public User createInternalUser(RegisterRequest request, String roleName) {
+        Role targetRole = roleRepository.findByName(roleName)
+                .orElseThrow(() -> new RuntimeException("Role not found: " + roleName));
+
+        User user = new User();
+        user.setEmail(request.getEmail());
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setRole(targetRole);
+        user.setFirstName(request.getFirstName());
+        user.setLastName(request.getLastName());
+        user.setUsername(request.getFirstName() + " " + request.getLastName());
+        return repository.save(user);
     }
 
     public AuthenticationResponse refreshToken(String refreshToken) {
@@ -133,25 +146,20 @@ public class AuthenticationService {
 
     public void initiatePasswordReset(String email) {
         User user = repository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
-
+                .orElseThrow(() -> new RuntimeException("User not found"));
         String token = UUID.randomUUID().toString();
         user.setResetToken(token);
         user.setResetTokenExpiry(LocalDateTime.now().plusMinutes(15));
         repository.save(user);
-
         emailService.sendPasswordResetEmail(user.getEmail(), token);
-        System.out.println(">>> SUCCESS: Reset email sent to " + email);
     }
 
     public void completePasswordReset(String token, String newPassword) {
         User user = repository.findByResetToken(token)
-                .orElseThrow(() -> new RuntimeException("Invalid reset token"));
-
+                .orElseThrow(() -> new RuntimeException("Invalid token"));
         if (user.getResetTokenExpiry().isBefore(LocalDateTime.now())) {
-            throw new RuntimeException("Reset token has expired");
+            throw new RuntimeException("Token expired");
         }
-
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setResetToken(null);
         user.setResetTokenExpiry(null);
@@ -162,7 +170,4 @@ public class AuthenticationService {
         User user = repository.findByEmail(request.getEmail()).orElse(null);
         return user != null && passwordEncoder.matches(request.getPassword(), user.getPassword());
     }
-
-    public void blacklistToken(String token) { tokenBlacklist.add(token); }
-    public boolean isTokenBlacklisted(String token) { return tokenBlacklist.contains(token); }
 }
