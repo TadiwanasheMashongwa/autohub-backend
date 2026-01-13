@@ -42,12 +42,19 @@ public class AuthenticationService {
         this.mfaService = mfaService;
     }
 
+    /**
+     * AUDIT #1.1: Customer Registration.
+     * Automatically assigns ROLE_CUSTOMER and creates a unique profile.
+     */
+    @Transactional
     public AuthenticationResponse register(RegisterRequest request) {
         if (repository.findByEmail(request.getEmail()).isPresent()) {
             throw new RuntimeException("An account with this email already exists.");
         }
 
-        Role userRole = roleRepository.findByName("ROLE_CUSTOMER").orElseThrow();
+        Role userRole = roleRepository.findByName("ROLE_CUSTOMER")
+                .orElseThrow(() -> new RuntimeException("Default Role not found."));
+
         User user = new User();
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
@@ -63,6 +70,9 @@ public class AuthenticationService {
         return generateTokenForUser(user);
     }
 
+    /**
+     * AUDIT #1.2: Standard Login with MFA check.
+     */
     public AuthenticationResponse authenticate(RegisterRequest request) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
@@ -80,6 +90,9 @@ public class AuthenticationService {
         return generateTokenForUser(user);
     }
 
+    /**
+     * PHASE 6: MFA Verification.
+     */
     public AuthenticationResponse verifyMfa(String email, String code) {
         User user = repository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -92,7 +105,8 @@ public class AuthenticationService {
     }
 
     /**
-     * UPDATED: Implements Refresh Token Rotation.
+     * PHASE 6: Refresh Token Rotation logic.
+     * Prevents session hijacking by issuing a new refresh token on every use.
      */
     @Transactional
     public AuthenticationResponse refreshToken(String refreshToken) {
@@ -100,23 +114,23 @@ public class AuthenticationService {
         User user = repository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Validate token integrity and check for reuse
         if (jwtService.isTokenValid(refreshToken, user) && refreshToken.equals(user.getRefreshToken())) {
-            // ROTATION: Generate fresh pair and invalidate old one
             return generateTokenForUser(user);
         }
 
-        // Invalidate session on suspected reuse
+        // Reuse detected or invalid: Kill session
         user.setRefreshToken(null);
         repository.save(user);
         throw new RuntimeException("Invalid or Expired Refresh Token. Please log in again.");
     }
 
+    /**
+     * Shared logic to create a fresh JWT pair.
+     */
     public AuthenticationResponse generateTokenForUser(User user) {
         String accessToken = jwtService.generateToken(user);
         String newRefreshToken = jwtService.generateRefreshToken(user);
 
-        // Persist new rotation
         user.setRefreshToken(newRefreshToken);
         repository.save(user);
 
@@ -128,6 +142,11 @@ public class AuthenticationService {
         );
     }
 
+    /**
+     * AUDIT #11.1: Clerk Onboarding.
+     * Used by Admins to create internal staff accounts.
+     */
+    @Transactional
     public User createInternalUser(RegisterRequest request, String roleName) {
         Role targetRole = roleRepository.findByName(roleName)
                 .orElseThrow(() -> new RuntimeException("Role not found: " + roleName));
@@ -142,6 +161,10 @@ public class AuthenticationService {
         return repository.save(user);
     }
 
+    /**
+     * AUDIT #1.3: Secure Logout.
+     */
+    @Transactional
     public void logout(String email) {
         User user = repository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -149,6 +172,10 @@ public class AuthenticationService {
         repository.save(user);
     }
 
+    /**
+     * AUDIT #1.9: Initiate Password Recovery.
+     */
+    @Transactional
     public void initiatePasswordReset(String email) {
         User user = repository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -159,9 +186,13 @@ public class AuthenticationService {
         emailService.sendPasswordResetEmail(user.getEmail(), token);
     }
 
+    /**
+     * AUDIT #1.10: Complete Password Recovery.
+     */
+    @Transactional
     public void completePasswordReset(String token, String newPassword) {
         User user = repository.findByResetToken(token)
-                .orElseThrow(() -> new RuntimeException("Invalid token"));
+                .orElseThrow(() -> new RuntimeException("Invalid or expired token"));
         if (user.getResetTokenExpiry().isBefore(LocalDateTime.now())) {
             throw new RuntimeException("Token expired");
         }
