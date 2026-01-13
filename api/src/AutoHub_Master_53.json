@@ -1,0 +1,102 @@
+{
+  "info": {
+    "_postman_id": "autohub-master-53",
+    "name": "AutoHub Master 53 - v10.3.1",
+    "description": "Complete 53-endpoint suite for Mike's AutoHub System including Warehouse, Logistics, and IAM.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Identity & Auth",
+      "item": [
+        { "name": "Register Customer", "request": { "method": "POST", "url": "{{base_url}}/api/v1/auth/register" }},
+        { "name": "Login", "request": { "method": "POST", "url": "{{base_url}}/api/v1/auth/authenticate" }},
+        { "name": "Verify MFA", "request": { "method": "POST", "url": "{{base_url}}/api/v1/auth/mfa/verify" }},
+        { "name": "Refresh Token", "request": { "method": "POST", "url": "{{base_url}}/api/v1/auth/refresh-token" }},
+        { "name": "Logout", "request": { "method": "POST", "url": "{{base_url}}/api/v1/auth/logout" }},
+        { "name": "Init Password Reset", "request": { "method": "POST", "url": "{{base_url}}/api/v1/auth/password-reset/initiate" }},
+        { "name": "Complete Password Reset", "request": { "method": "POST", "url": "{{base_url}}/api/v1/auth/password-reset/complete" }},
+        { "name": "Admin: Create Clerk", "request": { "method": "POST", "url": "{{base_url}}/api/v1/admin/create-clerk" }},
+        { "name": "Get Profile", "request": { "method": "GET", "url": "{{base_url}}/api/v1/users/profile" }},
+        { "name": "Update Profile", "request": { "method": "PUT", "url": "{{base_url}}/api/v1/users/profile" }},
+        { "name": "Admin: List Customers", "request": { "method": "GET", "url": "{{base_url}}/api/v1/admin/customers" }}
+      ]
+    },
+    {
+      "name": "2. Shopping Cart",
+      "item": [
+        { "name": "Get Cart", "request": { "method": "GET", "url": "{{base_url}}/api/v1/cart" }},
+        { "name": "Add/Update Item", "request": { "method": "POST", "url": "{{base_url}}/api/v1/cart/add?partId=1&quantity=2" }},
+        { "name": "Remove Item", "request": { "method": "DELETE", "url": "{{base_url}}/api/v1/cart/item/1" }},
+        { "name": "Clear Cart", "request": { "method": "DELETE", "url": "{{base_url}}/api/v1/cart/clear" }}
+      ]
+    },
+    {
+      "name": "3. Catalog & Inventory",
+      "item": [
+        { "name": "List All Parts", "request": { "method": "GET", "url": "{{base_url}}/api/v1/parts" }},
+        { "name": "Search Parts", "request": { "method": "GET", "url": "{{base_url}}/api/v1/parts/search?q=Brake" }},
+        { "name": "Scan Barcode (Clerk)", "request": { "method": "GET", "url": "{{base_url}}/api/v1/parts/scan/BARCODE123" }},
+        { "name": "Get Part Detail", "request": { "method": "GET", "url": "{{base_url}}/api/v1/parts/1" }},
+        { "name": "Parts by Category", "request": { "method": "GET", "url": "{{base_url}}/api/v1/parts/category/1" }},
+        { "name": "Parts by Vehicle", "request": { "method": "GET", "url": "{{base_url}}/api/v1/parts/vehicle/1" }},
+        { "name": "Admin: Create SKU", "request": { "method": "POST", "url": "{{base_url}}/api/v1/parts" }},
+        { "name": "Admin: Delete SKU", "request": { "method": "DELETE", "url": "{{base_url}}/api/v1/parts/1" }},
+        { "name": "Clerk: Quick Restock", "request": { "method": "PATCH", "url": "{{base_url}}/api/v1/admin/inventory/restock" }},
+        { "name": "Admin: Manual Stock Adjust", "request": { "method": "PATCH", "url": "{{base_url}}/api/v1/admin/inventory/1/stock" }},
+        { "name": "Admin: Low Stock Alerts", "request": { "method": "GET", "url": "{{base_url}}/api/v1/admin/inventory/low-stock" }}
+      ]
+    },
+    {
+      "name": "4. Vehicle Fitment",
+      "item": [
+        { "name": "Get Makes", "request": { "method": "GET", "url": "{{base_url}}/api/v1/vehicles/makes" }},
+        { "name": "Get Models", "request": { "method": "GET", "url": "{{base_url}}/api/v1/vehicles/models?make=Toyota" }},
+        { "name": "Get Years", "request": { "method": "GET", "url": "{{base_url}}/api/v1/vehicles/years?make=Toyota&model=Corolla" }},
+        { "name": "Get Vehicle Detail", "request": { "method": "GET", "url": "{{base_url}}/api/v1/vehicles/1" }},
+        { "name": "Admin: Add Vehicle Model", "request": { "method": "POST", "url": "{{base_url}}/api/v1/admin/vehicles" }},
+        { "name": "Link Part to Vehicle", "request": { "method": "POST", "url": "{{base_url}}/api/v1/parts/1/compatibility/1" }},
+        { "name": "Unlink Compatibility", "request": { "method": "DELETE", "url": "{{base_url}}/api/v1/parts/1/compatibility/1" }}
+      ]
+    },
+    {
+      "name": "5. Categories",
+      "item": [
+        { "name": "List Categories", "request": { "method": "GET", "url": "{{base_url}}/api/v1/categories" }},
+        { "name": "Get Category", "request": { "method": "GET", "url": "{{base_url}}/api/v1/categories/1" }},
+        { "name": "Admin: Create Category", "request": { "method": "POST", "url": "{{base_url}}/api/v1/categories" }},
+        { "name": "Admin: Update Category", "request": { "method": "PUT", "url": "{{base_url}}/api/v1/categories/1" }},
+        { "name": "Admin: Delete Category", "request": { "method": "DELETE", "url": "{{base_url}}/api/v1/categories/1" }}
+      ]
+    },
+    {
+      "name": "6. Order & Warehouse Flow",
+      "item": [
+        { "name": "Checkout (Idempotent)", "request": { "method": "POST", "header": [{"key": "Idempotency-Key", "value": "{{idempotency_key}}"}], "url": "{{base_url}}/api/v1/cart/checkout" }},
+        { "name": "My Order History", "request": { "method": "GET", "url": "{{base_url}}/api/v1/orders/my-orders" }},
+        { "name": "Get Order Detail", "request": { "method": "GET", "url": "{{base_url}}/api/v1/orders/1" }},
+        { "name": "Admin: List All Orders", "request": { "method": "GET", "url": "{{base_url}}/api/v1/orders/all" }},
+        { "name": "Cancel Order", "request": { "method": "POST", "url": "{{base_url}}/api/v1/orders/cancel/1" }},
+        { "name": "Clerk: Pick Item", "request": { "method": "POST", "url": "{{base_url}}/api/v1/admin/orders/1/pick?barcode=B1" }},
+        { "name": "Clerk: Ship Order", "request": { "method": "POST", "url": "{{base_url}}/api/v1/admin/orders/1/ship" }},
+        { "name": "Clerk: Set In-Transit", "request": { "method": "PATCH", "url": "{{base_url}}/api/v1/admin/orders/1/transit" }},
+        { "name": "Customer: Confirm Delivery", "request": { "method": "POST", "url": "{{base_url}}/api/v1/orders/1/confirm-receipt" }},
+        { "name": "Admin: Manual Status Change", "request": { "method": "PATCH", "url": "{{base_url}}/api/v1/admin/orders/1/status" }},
+        { "name": "Admin: Process Refund", "request": { "method": "POST", "url": "{{base_url}}/api/v1/admin/orders/1/refund" }},
+        { "name": "Admin: Generate Manifest", "request": { "method": "GET", "url": "{{base_url}}/api/v1/admin/orders/1/manifest" }}
+      ]
+    },
+    {
+      "name": "7. Social & Analytics",
+      "item": [
+        { "name": "Admin Dashboard Stats", "request": { "method": "GET", "url": "{{base_url}}/api/v1/admin/stats" }},
+        { "name": "Submit Review", "request": { "method": "POST", "url": "{{base_url}}/api/v1/reviews/add" }},
+        { "name": "Get Part Reviews", "request": { "method": "GET", "url": "{{base_url}}/api/v1/reviews/part/1" }}
+      ]
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{jwt_token}}", "type": "string" }]
+  }
+}
