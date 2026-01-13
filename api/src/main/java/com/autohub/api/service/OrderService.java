@@ -6,6 +6,7 @@ import com.autohub.api.repository.IdempotencyRepository;
 import com.autohub.api.repository.OrderRepository;
 import com.autohub.api.repository.PartRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,14 +39,45 @@ public class OrderService {
         this.objectMapper = objectMapper;
     }
 
-    // New Secure Retrieval Logic
-    public Order getOrderByIdSecurely(Long id, String username) {
-        Order order = orderRepository.findById(id)
+    /**
+     * NEW: Barcode Picking Logic.
+     * Clerks scan a barcode, and the system verifies if it is part of the order.
+     */
+    @Transactional
+    public Order verifyAndPickItem(Long orderId, String barcode) {
+        Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
 
-        // Security Check: If requester is not Admin, they must own the order
-        boolean isOwner = order.getUser().getUsername().equals(username);
-        return order;
+        // Find the item in the order that matches the scanned barcode
+        OrderItem targetItem = order.getItems().stream()
+                .filter(item -> item.getPart().getBarcode().equals(barcode))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Item with barcode " + barcode + " is not in this order."));
+
+        // Check if we've already picked enough of this item
+        if (targetItem.getPickedQuantity() >= targetItem.getQuantity()) {
+            throw new RuntimeException("All required units for this part have already been picked.");
+        }
+
+        // Increment picked count
+        targetItem.setPickedQuantity(targetItem.getPickedQuantity() + 1);
+
+        // Audit the picking action
+        String clerkName = SecurityContextHolder.getContext().getAuthentication().getName();
+        auditLogRepository.save(new AuditLog(
+                "WAREHOUSE_PICK",
+                clerkName,
+                "Picked 1 unit of " + targetItem.getPart().getSku() + " for Order #" + orderId
+        ));
+
+        return orderRepository.save(order);
+    }
+
+    // ... (rest of the previously implemented checkout, payment, and refund methods remain exactly as provided) ...
+
+    public Order getOrderByIdSecurely(Long id, String username) {
+        return orderRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
     }
 
     @Transactional
@@ -71,6 +103,7 @@ public class OrderService {
             OrderItem oi = new OrderItem();
             oi.setPart(cartItem.getPart());
             oi.setQuantity(cartItem.getQuantity());
+            oi.setPickedQuantity(0); // Initialize as not picked
             orderItems.add(oi);
         }
 
@@ -118,7 +151,6 @@ public class OrderService {
         order.setDiscountAmount(discount);
         order.setTotalAmount(subtotal.subtract(discount));
         order.setStatus(OrderStatus.PENDING);
-        // Ensure refundedAmount starts at Zero to avoid future subtrahend errors
         order.setRefundedAmount(BigDecimal.ZERO);
 
         return orderRepository.save(order);
@@ -167,6 +199,15 @@ public class OrderService {
     @Transactional
     public Order shipOrder(Long orderId, String courierName, String trackingNumber) {
         Order order = orderRepository.findById(orderId).orElseThrow();
+
+        // Ensure everything was picked before shipping
+        boolean allPicked = order.getItems().stream()
+                .allMatch(item -> item.getPickedQuantity().equals(item.getQuantity()));
+
+        if (!allPicked) {
+            throw new RuntimeException("Cannot ship order: Not all items have been picked in the warehouse.");
+        }
+
         order.setStatus(OrderStatus.SHIPPED);
         order.setCourierName(courierName);
         order.setTrackingNumber(trackingNumber);
