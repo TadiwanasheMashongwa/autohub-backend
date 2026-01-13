@@ -26,7 +26,6 @@ public class Order {
 
     private BigDecimal totalAmount;
     private BigDecimal discountAmount = BigDecimal.ZERO;
-
     private BigDecimal refundedAmount = BigDecimal.ZERO;
     private String returnReason;
     private String couponCode;
@@ -34,9 +33,7 @@ public class Order {
     private String trackingNumber;
     private String courierName;
     private LocalDateTime shippedDate;
-
-    // NEW FIELD: Added to resolve compiler error in OrderService
-    private LocalDateTime deliveryDate;
+    private LocalDateTime deliveryDate; // Added for Phase 5 logistics
 
     private String paymentId;
     private String paymentStatus;
@@ -64,7 +61,7 @@ public class Order {
     public String getTrackingNumber() { return trackingNumber; }
     public String getCourierName() { return courierName; }
     public LocalDateTime getShippedDate() { return shippedDate; }
-    public LocalDateTime getDeliveryDate() { return deliveryDate; } // Added
+    public LocalDateTime getDeliveryDate() { return deliveryDate; }
     public String getPaymentId() { return paymentId; }
     public String getPaymentStatus() { return paymentStatus; }
 
@@ -82,7 +79,7 @@ public class Order {
     public void setTrackingNumber(String trackingNumber) { this.trackingNumber = trackingNumber; }
     public void setCourierName(String courierName) { this.courierName = courierName; }
     public void setShippedDate(LocalDateTime shippedDate) { this.shippedDate = shippedDate; }
-    public void setDeliveryDate(LocalDateTime deliveryDate) { this.deliveryDate = deliveryDate; } // Added
+    public void setDeliveryDate(LocalDateTime deliveryDate) { this.deliveryDate = deliveryDate; }
     public void setPaymentId(String paymentId) { this.paymentId = paymentId; }
     public void setPaymentStatus(String paymentStatus) { this.paymentStatus = paymentStatus; }
 }

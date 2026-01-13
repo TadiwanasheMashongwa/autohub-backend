@@ -65,7 +65,6 @@ public class OrderController {
     }
 
     private User getUserFromAuth(Authentication authentication) {
-        // FIX: Changed from findByUsername to findByEmail to match JWT principal
         return userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + authentication.getName()));
     }
