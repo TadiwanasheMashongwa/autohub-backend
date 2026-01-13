@@ -26,6 +26,11 @@ public class ReviewController {
         this.userRepository = userRepository;
     }
 
+    /**
+     * AUDIT #9.1: Add a product review.
+     * Delegates to ReviewService to enforce the "Verified Purchase" rule
+     * and automatically update the Part's average rating.
+     */
     @PostMapping("/add")
     public ResponseEntity<Review> addReview(@RequestBody Map<String, Object> payload, Authentication authentication) {
         User user = getUserFromAuth(authentication);
@@ -37,13 +42,15 @@ public class ReviewController {
         return ResponseEntity.ok(reviewService.addReview(user, partId, rating, comment));
     }
 
+    /**
+     * AUDIT #9.2: Browse reviews for a specific part.
+     */
     @GetMapping("/part/{partId}")
     public ResponseEntity<List<Review>> getReviewsByPart(@PathVariable Long partId) {
         return ResponseEntity.ok(reviewRepository.findByPartId(partId));
     }
 
     private User getUserFromAuth(Authentication authentication) {
-        // FIX: Changed from findByUsername to findByEmail to match JWT principal
         return userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + authentication.getName()));
     }
