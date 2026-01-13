@@ -41,101 +41,138 @@ public class OrderService {
         this.objectMapper = objectMapper;
     }
 
-    /** * FINALIZED: COMPLETE LIFECYCLE
-     * MARK AS DELIVERED & TRIGGER FINAL NOTIFICATION
+    /**
+     * PHASE 4: Payment Confirmation & Stock Release.
      */
     @Transactional
-    public Order markAsDelivered(Long orderId) {
+    public Order confirmPayment(Long orderId, String paymentId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
 
-        // Transition to terminal state
-        order.setStatus(OrderStatus.DELIVERED);
-        order.setDeliveryDate(LocalDateTime.now());
-
-        Order savedOrder = orderRepository.save(order);
-
-        // Final Audit Log
-        auditLogRepository.save(new AuditLog("ORDER_DELIVERED", "SYSTEM", "Order #" + orderId + " completed lifecycle."));
-
-        // Final Trigger: Delivery & Review Request
-        emailService.sendDeliveryConfirmation(savedOrder);
-
-        return savedOrder;
-    }
-
-    @Transactional
-    public Order confirmPayment(Long orderId, String paymentId) {
-        Order order = orderRepository.findById(orderId).orElseThrow();
-        if (order.getStatus() != OrderStatus.PENDING) throw new RuntimeException("Invalid status");
+        if (order.getStatus() != OrderStatus.PENDING) {
+            throw new RuntimeException("Payment cannot be confirmed. Current status: " + order.getStatus());
+        }
 
         for (OrderItem item : order.getItems()) {
-            Part part = partRepository.findById(item.getPart().getId()).orElseThrow();
-            if (part.getStockQuantity() < item.getQuantity()) throw new RuntimeException("Stock error");
+            Part part = partRepository.findById(item.getPart().getId())
+                    .orElseThrow(() -> new RuntimeException("Part not found: " + item.getPart().getSku()));
+
+            if (part.getStockQuantity() < item.getQuantity()) {
+                throw new RuntimeException("Insufficient stock for SKU: " + part.getSku());
+            }
+
             part.setStockQuantity(part.getStockQuantity() - item.getQuantity());
             partRepository.save(part);
-            auditLogRepository.save(new AuditLog("STOCK_DEDUCTION", "SYSTEM", "SKU: " + part.getSku()));
+
+            auditLogRepository.save(new AuditLog("STOCK_DEDUCTION", "SYSTEM_PAYMENT",
+                    "Deducted " + item.getQuantity() + " for SKU: " + part.getSku()));
         }
+
         order.setPaymentId(paymentId);
         order.setPaymentStatus("SUCCEEDED");
         order.setStatus(OrderStatus.COMPLETED);
+
         Order savedOrder = orderRepository.save(order);
         emailService.sendOrderConfirmation(savedOrder);
+
         return savedOrder;
     }
 
-    @Transactional
-    public Order shipOrder(Long orderId, String courierName, String trackingNumber) {
-        Order order = orderRepository.findById(orderId).orElseThrow();
-        boolean allPicked = order.getItems().stream().allMatch(i -> i.getPickedQuantity().equals(i.getQuantity()));
-        if (!allPicked) throw new RuntimeException("Picking incomplete");
-
-        order.setStatus(OrderStatus.SHIPPED);
-        order.setCourierName(courierName);
-        order.setTrackingNumber(trackingNumber);
-        order.setShippedDate(LocalDateTime.now());
-        Order savedOrder = orderRepository.save(order);
-        emailService.sendShippingNotification(savedOrder);
-        return savedOrder;
-    }
-
-    @Transactional
-    public Order verifyAndPickItem(Long orderId, String barcode) {
-        Order order = orderRepository.findById(orderId).orElseThrow();
-        OrderItem target = order.getItems().stream().filter(i -> i.getPart().getBarcode().equals(barcode)).findFirst().orElseThrow();
-        if (target.getPickedQuantity() >= target.getQuantity()) throw new RuntimeException("Already picked");
-        target.setPickedQuantity(target.getPickedQuantity() + 1);
-        String clerk = SecurityContextHolder.getContext().getAuthentication().getName();
-        auditLogRepository.save(new AuditLog("WAREHOUSE_PICK", clerk, "Order #" + orderId));
-        return orderRepository.save(order);
-    }
-
+    /**
+     * PHASE 6: Checkout Logic & Email Trigger 1.
+     */
     @Transactional
     public Order checkoutCart(User user, String idempotencyKey) {
         if (idempotencyKey != null) {
             Optional<IdempotencyRecord> record = idempotencyRepository.findById(idempotencyKey);
             if (record.isPresent()) {
-                try { return objectMapper.readValue(record.get().getResponseBody(), Order.class); } catch (Exception e) {}
+                try {
+                    return objectMapper.readValue(record.get().getResponseBody(), Order.class);
+                } catch (Exception e) { throw new RuntimeException("Checkout recovery failed"); }
             }
         }
+
         Cart cart = user.getCart();
-        if (cart == null || cart.getItems().isEmpty()) throw new RuntimeException("Cart empty");
-        List<OrderItem> items = new ArrayList<>();
+        if (cart == null || cart.getItems().isEmpty()) throw new RuntimeException("Cart is empty");
+
+        List<OrderItem> orderItems = new ArrayList<>();
         for (CartItem ci : cart.getItems()) {
             OrderItem oi = new OrderItem();
             oi.setPart(ci.getPart());
             oi.setQuantity(ci.getQuantity());
             oi.setPickedQuantity(0);
-            items.add(oi);
+            orderItems.add(oi);
         }
-        Order order = createOrderWithCoupon(user, items, cart.getAppliedCoupon());
+
+        Order order = createOrderWithCoupon(user, orderItems, cart.getAppliedCoupon());
         cart.getItems().clear();
         cart.setAppliedCoupon(null);
+
         emailService.sendOrderReceivedEmail(order);
+
         if (idempotencyKey != null) {
-            try { idempotencyRepository.save(new IdempotencyRecord(idempotencyKey, objectMapper.writeValueAsString(order), 200)); } catch (Exception e) {}
+            try {
+                idempotencyRepository.save(new IdempotencyRecord(idempotencyKey, objectMapper.writeValueAsString(order), 200));
+            } catch (Exception e) { /* ignored */ }
         }
         return order;
+    }
+
+    /**
+     * PHASE 3: Barcode Picking.
+     */
+    @Transactional
+    public Order verifyAndPickItem(Long orderId, String barcode) {
+        Order order = orderRepository.findById(orderId).orElseThrow();
+        OrderItem item = order.getItems().stream()
+                .filter(i -> i.getPart().getBarcode().equals(barcode))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Barcode mismatch."));
+
+        if (item.getPickedQuantity() >= item.getQuantity()) {
+            throw new RuntimeException("Already picked.");
+        }
+
+        item.setPickedQuantity(item.getPickedQuantity() + 1);
+        String clerk = SecurityContextHolder.getContext().getAuthentication().getName();
+        auditLogRepository.save(new AuditLog("WAREHOUSE_PICK", clerk, "Order #" + orderId));
+        return orderRepository.save(order);
+    }
+
+    /**
+     * PHASE 5: Courier Integration.
+     */
+    @Transactional
+    public Order shipOrder(Long orderId, String courierName, String trackingNumber) {
+        Order order = orderRepository.findById(orderId).orElseThrow();
+
+        boolean allPicked = order.getItems().stream()
+                .allMatch(i -> i.getPickedQuantity().equals(i.getQuantity()));
+
+        if (!allPicked) throw new RuntimeException("Cannot ship: Not all items picked.");
+
+        order.setStatus(OrderStatus.SHIPPED);
+        order.setCourierName(courierName);
+        order.setTrackingNumber(trackingNumber);
+        order.setShippedDate(LocalDateTime.now());
+
+        Order savedOrder = orderRepository.save(order);
+        emailService.sendShippingNotification(savedOrder);
+        return savedOrder;
+    }
+
+    /**
+     * PHASE 5/6: Final Delivery.
+     */
+    @Transactional
+    public Order markAsDelivered(Long orderId) {
+        Order order = orderRepository.findById(orderId).orElseThrow();
+        order.setStatus(OrderStatus.DELIVERED);
+        order.setDeliveryDate(LocalDateTime.now()); // Now correctly mapped to Updated Order.java
+
+        Order savedOrder = orderRepository.save(order);
+        emailService.sendDeliveryConfirmation(savedOrder);
+        return savedOrder;
     }
 
     @Transactional
@@ -143,21 +180,27 @@ public class OrderService {
         Order order = new Order();
         order.setUser(user);
         BigDecimal subtotal = BigDecimal.ZERO;
+
         for (OrderItem item : items) {
             Part part = partRepository.findById(item.getPart().getId()).orElseThrow();
             item.setPriceAtPurchase(part.getPrice());
             subtotal = subtotal.add(part.getPrice().multiply(new BigDecimal(item.getQuantity())));
         }
+
         BigDecimal discount = BigDecimal.ZERO;
         if (coupon != null && subtotal.compareTo(coupon.getMinSpend()) >= 0) {
-            discount = "PERCENTAGE".equals(coupon.getDiscountType()) ? subtotal.multiply(coupon.getDiscountValue().divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP)) : coupon.getDiscountValue();
+            discount = "PERCENTAGE".equals(coupon.getDiscountType())
+                    ? subtotal.multiply(coupon.getDiscountValue().divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP))
+                    : coupon.getDiscountValue();
             order.setCouponCode(coupon.getCode());
         }
+
         order.setItems(items);
         order.setDiscountAmount(discount);
         order.setTotalAmount(subtotal.subtract(discount));
         order.setStatus(OrderStatus.PENDING);
         order.setRefundedAmount(BigDecimal.ZERO);
+
         return orderRepository.save(order);
     }
 
@@ -170,8 +213,8 @@ public class OrderService {
 
     public BigDecimal calculateTotalRevenue() {
         return orderRepository.findAll().stream()
-                .filter(o -> o.getStatus() == OrderStatus.DELIVERED)
-                .map(o -> o.getTotalAmount().subtract(o.getRefundedAmount() != null ? o.getRefundedAmount() : BigDecimal.ZERO))
+                .filter(o -> o.getStatus() == OrderStatus.DELIVERED || o.getStatus() == OrderStatus.COMPLETED)
+                .map(o -> o.getTotalAmount().subtract(o.getRefundedAmount()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
