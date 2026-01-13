@@ -254,7 +254,7 @@ public class OrderService {
 
     public long getTotalOrderCount() { return orderRepository.count(); }
 
-    public Order getOrderBy.IdSecurely(Long id, String email) {
+    public Order getOrderByIdSecurely(Long id, String email) {
         Order order = orderRepository.findById(id).orElseThrow();
         // Check ownership or role can be added here
         return order;

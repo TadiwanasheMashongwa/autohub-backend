@@ -38,12 +38,32 @@ public class AdminController {
         this.authenticationService = authenticationService;
     }
 
+    /**
+     * PHASE 3: Warehouse Picking Verification.
+     * New: Allows clerks to scan a barcode to fulfill an item in an order.
+     */
+    @PostMapping("/orders/{orderId}/pick")
+    public ResponseEntity<Order> verifyAndPick(
+            @PathVariable Long orderId,
+            @RequestParam String barcode) {
+        return ResponseEntity.ok(orderService.verifyAndPickItem(orderId, barcode));
+    }
+
     @PostMapping("/orders/{orderId}/ship")
     public ResponseEntity<Order> shipOrder(
             @PathVariable Long orderId,
             @RequestParam String courierName,
             @RequestParam String trackingNumber) {
         return ResponseEntity.ok(orderService.shipOrder(orderId, courierName, trackingNumber));
+    }
+
+    /**
+     * PHASE 5: Transition order to IN_TRANSIT.
+     * New: Used when the courier has collected the package.
+     */
+    @PatchMapping("/orders/{orderId}/transit")
+    public ResponseEntity<Order> setInTransit(@PathVariable Long orderId) {
+        return ResponseEntity.ok(orderService.transitOrder(orderId));
     }
 
     @GetMapping("/orders/{orderId}/manifest")
