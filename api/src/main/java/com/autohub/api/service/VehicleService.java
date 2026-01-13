@@ -41,14 +41,23 @@ public class VehicleService {
         vehicleRepository.delete(vehicle);
     }
 
+    /**
+     * PHASE 3: Fitment Search - Step 1
+     */
     public List<String> getUniqueMakes() {
         return vehicleRepository.findDistinctMakes();
     }
 
+    /**
+     * PHASE 3: Fitment Search - Step 2
+     */
     public List<String> getModelsByMake(String make) {
         return vehicleRepository.findDistinctModelsByMake(make);
     }
 
+    /**
+     * PHASE 3: Fitment Search - Step 3
+     */
     public List<String> getYearRangesByMakeAndModel(String make, String model) {
         return vehicleRepository.findDistinctYearRangesByMakeAndModel(make, model);
     }
