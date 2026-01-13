@@ -21,15 +21,21 @@ public class ReviewService {
     private final PartRepository partRepository;
     private final OrderRepository orderRepository;
 
-    public ReviewService(ReviewRepository reviewRepository, PartRepository partRepository, OrderRepository orderRepository) {
+    public ReviewService(ReviewRepository reviewRepository,
+                         PartRepository partRepository,
+                         OrderRepository orderRepository) {
         this.reviewRepository = reviewRepository;
         this.partRepository = partRepository;
         this.orderRepository = orderRepository;
     }
 
+    /**
+     * AUDIT #9.1: Logic to add a review with verified purchase check.
+     * Ensures social proof is genuine for Mike's store.
+     */
     @Transactional
     public Review addReview(User user, Long partId, Double rating, String comment) {
-        // 1. Verify Purchaser
+        // 1. Verify Purchaser (Phase 4 Logic)
         if (!orderRepository.hasUserPurchasedPart(user.getId(), partId)) {
             throw new RuntimeException("Only verified purchasers can review this part.");
         }
@@ -51,15 +57,21 @@ public class ReviewService {
 
         Review savedReview = reviewRepository.save(review);
 
-        // 4. Update Part Rating using Native SQL
+        // 4. Update Part Rating using Native SQL to bypass Hibernate dirty-checking
         updatePartRatingNative(partId);
 
         return savedReview;
     }
 
+    /**
+     * Aggregates all ratings for a part and updates the master Part record.
+     */
     private void updatePartRatingNative(Long partId) {
         Double average = reviewRepository.getAverageRatingForPart(partId).orElse(0.0);
+
+        // Ensure consistent 1-decimal precision (e.g., 4.5)
         BigDecimal bd = BigDecimal.valueOf(average).setScale(1, RoundingMode.HALF_UP);
+
         partRepository.updateAverageRatingNative(partId, bd.doubleValue());
     }
 }
