@@ -9,14 +9,14 @@ import java.util.List;
 public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
 
     /**
-     * AUDIT #11.4: Staff Performance Tracking.
-     * Allows Mike to see all actions performed by a specific Clerk.
+     * FIXED: Changed findByActionType to findByAction.
+     * Aligned with 'action' field in AuditLog entity to resolve QueryCreationException.
      */
-    List<AuditLog> findByPerformedByOrderByTimestampDesc(String performedBy);
+    List<AuditLog> findByActionOrderByTimestampDesc(String action);
 
     /**
-     * AUDIT #11.5: Event Investigation.
-     * Filters logs by action type (e.g., 'STOCK_DEDUCTION', 'REFUND_ISSUED').
+     * Matches the 'performedBy' field in the AuditLog entity.
+     * Supports Admin tracking of specific Clerk activities.
      */
-    List<AuditLog> findByActionTypeOrderByTimestampDesc(String actionType);
+    List<AuditLog> findByPerformedByOrderByTimestampDesc(String performedBy);
 }

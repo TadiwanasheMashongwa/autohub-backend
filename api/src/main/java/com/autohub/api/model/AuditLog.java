@@ -10,12 +10,14 @@ public class AuditLog {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String action; // e.g., "PRICE_CHANGE", "STOCK_ADJUSTMENT"
-    private String performedBy; // Username of the Admin
+    private String action; // Matches repository findByAction
+    private String performedBy; // Matches repository findByPerformedBy
     private String details;
     private LocalDateTime timestamp;
 
-    public AuditLog() { this.timestamp = LocalDateTime.now(); }
+    public AuditLog() {
+        this.timestamp = LocalDateTime.now();
+    }
 
     public AuditLog(String action, String performedBy, String details) {
         this();
@@ -30,4 +32,10 @@ public class AuditLog {
     public String getPerformedBy() { return performedBy; }
     public String getDetails() { return details; }
     public LocalDateTime getTimestamp() { return timestamp; }
+
+    // Setters (Added for full entity support)
+    public void setAction(String action) { this.action = action; }
+    public void setPerformedBy(String performedBy) { this.performedBy = performedBy; }
+    public void setDetails(String details) { this.details = details; }
+    public void setTimestamp(LocalDateTime timestamp) { this.timestamp = timestamp; }
 }
