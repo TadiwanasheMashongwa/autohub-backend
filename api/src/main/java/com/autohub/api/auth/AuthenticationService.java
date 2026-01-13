@@ -6,14 +6,14 @@ import com.autohub.api.repository.UserRepository;
 import com.autohub.api.repository.RoleRepository;
 import com.autohub.api.service.JwtService;
 import com.autohub.api.service.EmailService;
-import com.autohub.api.service.MfaService; // New Import
+import com.autohub.api.service.MfaService;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -24,7 +24,7 @@ public class AuthenticationService {
     private final AuthenticationManager authenticationManager;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
-    private final MfaService mfaService; // Injected Service
+    private final MfaService mfaService;
 
     public AuthenticationService(UserRepository repository,
                                  RoleRepository roleRepository,
@@ -42,7 +42,6 @@ public class AuthenticationService {
         this.mfaService = mfaService;
     }
 
-    // UPDATED: Registration logic remains same but ensures internal consistency
     public AuthenticationResponse register(RegisterRequest request) {
         if (repository.findByEmail(request.getEmail()).isPresent()) {
             throw new RuntimeException("An account with this email already exists.");
@@ -64,29 +63,23 @@ public class AuthenticationService {
         return generateTokenForUser(user);
     }
 
-    // UPDATED: Login flow now handles MFA checks
     public AuthenticationResponse authenticate(RegisterRequest request) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
         User user = repository.findByEmail(request.getEmail()).orElseThrow();
 
-        // If MFA is enabled, we DO NOT return the tokens yet.
-        // We return a response that tells the frontend to show the MFA input.
         if (user.isMfaEnabled()) {
             AuthenticationResponse mfaResponse = new AuthenticationResponse();
             mfaResponse.setRole(user.getRole().getName());
             mfaResponse.setUsername(user.getEmail());
-            mfaResponse.setAccessToken("MFA_REQUIRED"); // Sentinel value for frontend
+            mfaResponse.setAccessToken("MFA_REQUIRED");
             return mfaResponse;
         }
 
         return generateTokenForUser(user);
     }
 
-    /**
-     * NEW: Verification method for the 2nd Factor
-     */
     public AuthenticationResponse verifyMfa(String email, String code) {
         User user = repository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -98,21 +91,43 @@ public class AuthenticationService {
         return generateTokenForUser(user);
     }
 
+    /**
+     * UPDATED: Implements Refresh Token Rotation.
+     */
+    @Transactional
+    public AuthenticationResponse refreshToken(String refreshToken) {
+        String email = jwtService.extractUsername(refreshToken);
+        User user = repository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Validate token integrity and check for reuse
+        if (jwtService.isTokenValid(refreshToken, user) && refreshToken.equals(user.getRefreshToken())) {
+            // ROTATION: Generate fresh pair and invalidate old one
+            return generateTokenForUser(user);
+        }
+
+        // Invalidate session on suspected reuse
+        user.setRefreshToken(null);
+        repository.save(user);
+        throw new RuntimeException("Invalid or Expired Refresh Token. Please log in again.");
+    }
+
     public AuthenticationResponse generateTokenForUser(User user) {
         String accessToken = jwtService.generateToken(user);
-        String refreshToken = jwtService.generateRefreshToken(user);
-        user.setRefreshToken(refreshToken);
+        String newRefreshToken = jwtService.generateRefreshToken(user);
+
+        // Persist new rotation
+        user.setRefreshToken(newRefreshToken);
         repository.save(user);
 
         return new AuthenticationResponse(
                 accessToken,
-                refreshToken,
+                newRefreshToken,
                 user.getRole().getName(),
                 user.getEmail()
         );
     }
 
-    // RESTORED: Internal user creation for Clerks/Admins
     public User createInternalUser(RegisterRequest request, String roleName) {
         Role targetRole = roleRepository.findByName(roleName)
                 .orElseThrow(() -> new RuntimeException("Role not found: " + roleName));
@@ -125,16 +140,6 @@ public class AuthenticationService {
         user.setLastName(request.getLastName());
         user.setUsername(request.getFirstName() + " " + request.getLastName());
         return repository.save(user);
-    }
-
-    public AuthenticationResponse refreshToken(String refreshToken) {
-        String email = jwtService.extractUsername(refreshToken);
-        User user = repository.findByEmail(email).orElseThrow();
-
-        if (jwtService.isTokenValid(refreshToken, user) && refreshToken.equals(user.getRefreshToken())) {
-            return generateTokenForUser(user);
-        }
-        throw new RuntimeException("Invalid Refresh Token");
     }
 
     public void logout(String email) {

@@ -2,13 +2,13 @@ package com.autohub.api.auth;
 
 /**
  * Data Transfer Object for authentication responses.
- * Workflow v2.9: Added support for Refresh Token rotation.
+ * Supported by Phase 2 Step 3 Refresh Token rotation logic.
  */
 public class AuthenticationResponse {
     private String accessToken;
     private String refreshToken;
     private String role;
-    private String username;
+    private String username; // Returns email as the identity principal
 
     public AuthenticationResponse() {}
 
