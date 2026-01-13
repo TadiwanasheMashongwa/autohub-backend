@@ -20,7 +20,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/admin")
-@PreAuthorize("hasAnyRole('ADMIN', 'CLERK')") // Expanded access for warehouse clerks
+@PreAuthorize("hasAnyRole('ADMIN', 'CLERK')")
 public class AdminController {
 
     private final OrderService orderService;
@@ -28,7 +28,10 @@ public class AdminController {
     private final UserRepository userRepository;
     private final AuthenticationService authenticationService;
 
-    public AdminController(OrderService orderService, PartService partService, UserRepository userRepository, AuthenticationService authenticationService) {
+    public AdminController(OrderService orderService,
+                           PartService partService,
+                           UserRepository userRepository,
+                           AuthenticationService authenticationService) {
         this.orderService = orderService;
         this.partService = partService;
         this.userRepository = userRepository;
@@ -36,21 +39,46 @@ public class AdminController {
     }
 
     /**
-     * NEW: Scan-to-Restock Endpoint.
-     * Allows warehouse staff to increment stock by scanning a barcode.
+     * PHASE 5, STEP 2: Courier Tracking Sync.
+     * Endpoint for clerks to mark an order as SHIPPED and provide tracking info.
+     */
+    @PostMapping("/orders/{orderId}/ship")
+    public ResponseEntity<Order> shipOrder(
+            @PathVariable Long orderId,
+            @RequestParam String courierName,
+            @RequestParam String trackingNumber) {
+        // Calls the synchronized OrderService logic that validates picking status first
+        return ResponseEntity.ok(orderService.shipOrder(orderId, courierName, trackingNumber));
+    }
+
+    /**
+     * PHASE 5, STEP 1: Manifest Retrieval.
+     * Allows clerks to view the shipping manifest (weight/volume) for a specific order.
+     */
+    @GetMapping("/orders/{orderId}/manifest")
+    public ResponseEntity<Map<String, Object>> getManifest(@PathVariable Long orderId) {
+        return ResponseEntity.ok(orderService.getOrderManifest(orderId));
+    }
+
+    /**
+     * PHASE 3: Scan-to-Restock.
      */
     @PatchMapping("/inventory/restock")
     public ResponseEntity<Part> restock(@RequestParam String barcode, @RequestParam Integer quantity) {
         return ResponseEntity.ok(partService.restockByBarcode(barcode, quantity));
     }
 
-    // --- EXISTING DASHBOARD & CLERK METHODS ---
+    // --- ADMINISTRATIVE & ANALYTICS ---
+
     @PostMapping("/create-clerk")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> createClerk(@RequestBody RegisterRequest request) {
         try {
             User clerk = authenticationService.createInternalUser(request, "ROLE_CLERK");
-            return ResponseEntity.ok(Map.of("message", "Clerk created successfully", "email", clerk.getEmail()));
+            return ResponseEntity.ok(Map.of(
+                    "message", "Clerk account created successfully",
+                    "email", clerk.getEmail()
+            ));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
@@ -67,11 +95,6 @@ public class AdminController {
         return ResponseEntity.ok(stats);
     }
 
-    @PostMapping("/orders/{orderId}/ship")
-    public ResponseEntity<Order> shipOrder(@PathVariable Long orderId, @RequestParam String courierName, @RequestParam String trackingNumber) {
-        return ResponseEntity.ok(orderService.shipOrder(orderId, courierName, trackingNumber));
-    }
-
     @PatchMapping("/inventory/{partId}/stock")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Part> adjustStock(@PathVariable Long partId, @RequestParam Integer quantity) {
@@ -80,9 +103,21 @@ public class AdminController {
 
     @GetMapping("/customers")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<User>> getAllCustomers() { return ResponseEntity.ok(userRepository.findAllCustomers()); }
+    public ResponseEntity<List<User>> getAllCustomers() {
+        return ResponseEntity.ok(userRepository.findAllCustomers());
+    }
+
+    @PostMapping("/orders/{orderId}/refund")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Order> issueRefund(
+            @PathVariable Long orderId,
+            @RequestParam BigDecimal amount,
+            @RequestParam boolean restock) {
+        return ResponseEntity.ok(orderService.processRefund(orderId, amount, restock));
+    }
 
     private User getUserFromAuth(Authentication authentication) {
-        return userRepository.findByEmail(authentication.getName()).orElseThrow(() -> new RuntimeException("Admin not found"));
+        return userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new RuntimeException("Identity not found for: " + authentication.getName()));
     }
 }

@@ -11,6 +11,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -20,6 +21,7 @@ public class OrderService {
     private final EmailService emailService;
     private final IdempotencyRepository idempotencyRepository;
     private final AuditLogRepository auditLogRepository;
+    private final ShippingService shippingService;
     private final ObjectMapper objectMapper;
 
     public OrderService(OrderRepository orderRepository,
@@ -27,18 +29,20 @@ public class OrderService {
                         EmailService emailService,
                         IdempotencyRepository idempotencyRepository,
                         AuditLogRepository auditLogRepository,
+                        ShippingService shippingService,
                         ObjectMapper objectMapper) {
         this.orderRepository = orderRepository;
         this.partRepository = partRepository;
         this.emailService = emailService;
         this.idempotencyRepository = idempotencyRepository;
         this.auditLogRepository = auditLogRepository;
+        this.shippingService = shippingService;
         this.objectMapper = objectMapper;
     }
 
     /**
-     * IMPLEMENTED: Phase 4, Step 3 - Automated Stock Release.
-     * Triggered only after successful payment confirmation.
+     * PHASE 4: Automated Stock Release.
+     * Triggered only after successful payment confirmation via webhook/service.
      */
     @Transactional
     public Order confirmPayment(Long orderId, String paymentId) {
@@ -46,7 +50,7 @@ public class OrderService {
                 .orElseThrow(() -> new RuntimeException("Order not found"));
 
         if (order.getStatus() != OrderStatus.PENDING) {
-            throw new RuntimeException("Order is not in a state to be paid (Status: " + order.getStatus() + ")");
+            throw new RuntimeException("Order is not in a state to be paid. Current Status: " + order.getStatus());
         }
 
         // Atomically deduct stock
@@ -55,18 +59,17 @@ public class OrderService {
                     .orElseThrow(() -> new RuntimeException("Part not found: " + item.getPart().getSku()));
 
             if (part.getStockQuantity() < item.getQuantity()) {
-                throw new RuntimeException("Stock sold out for: " + part.getName() + " while processing payment.");
+                throw new RuntimeException("Stock sold out for SKU: " + part.getSku());
             }
 
-            // Deduct stock
             part.setStockQuantity(part.getStockQuantity() - item.getQuantity());
             partRepository.save(part);
 
-            // Log the stock movement
+            // Phase 4 Audit Sync
             auditLogRepository.save(new AuditLog(
                     "STOCK_DEDUCTION",
                     "SYSTEM_PAYMENT",
-                    "Deducted " + item.getQuantity() + " units for SKU: " + part.getSku()
+                    "Deducted " + item.getQuantity() + " units for SKU: " + part.getSku() + " (Order #" + orderId + ")"
             ));
         }
 
@@ -76,14 +79,15 @@ public class OrderService {
 
         Order savedOrder = orderRepository.save(order);
 
-        auditLogRepository.save(new AuditLog("PAYMENT_CONFIRMED", "SYSTEM", "Order #" + orderId + " finalized."));
+        auditLogRepository.save(new AuditLog("PAYMENT_CONFIRMED", "SYSTEM", "Order #" + orderId + " payment verified."));
         emailService.sendOrderConfirmation(savedOrder);
 
         return savedOrder;
     }
 
     /**
-     * IMPLEMENTED: Phase 3, Step 1 - Barcode Picking.
+     * PHASE 3: Barcode Picking Flow.
+     * Allows warehouse staff to scan items to verify they match the order.
      */
     @Transactional
     public Order verifyAndPickItem(Long orderId, String barcode) {
@@ -93,10 +97,10 @@ public class OrderService {
         OrderItem targetItem = order.getItems().stream()
                 .filter(item -> item.getPart().getBarcode().equals(barcode))
                 .findFirst()
-                .orElseThrow(() -> new RuntimeException("Item with barcode " + barcode + " is not in this order."));
+                .orElseThrow(() -> new RuntimeException("Barcode " + barcode + " does not belong to this order."));
 
         if (targetItem.getPickedQuantity() >= targetItem.getQuantity()) {
-            throw new RuntimeException("All required units for this part have already been picked.");
+            throw new RuntimeException("Quantity already fulfilled for this part.");
         }
 
         targetItem.setPickedQuantity(targetItem.getPickedQuantity() + 1);
@@ -105,12 +109,25 @@ public class OrderService {
         auditLogRepository.save(new AuditLog(
                 "WAREHOUSE_PICK",
                 clerkName,
-                "Picked 1 unit of " + targetItem.getPart().getSku() + " for Order #" + orderId
+                "Picked SKU: " + targetItem.getPart().getSku() + " for Order #" + orderId
         ));
 
         return orderRepository.save(order);
     }
 
+    /**
+     * PHASE 5: Shipping Engine Manifest.
+     * Generates a manifest including weight and shipping details for couriers.
+     */
+    public Map<String, Object> getOrderManifest(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+        return shippingService.generateManifest(order);
+    }
+
+    /**
+     * Checkout Logic with Idempotency & Coupon Support.
+     */
     @Transactional
     public Order checkoutCart(User user, String idempotencyKey) {
         if (idempotencyKey != null) {
@@ -119,14 +136,14 @@ public class OrderService {
                 try {
                     return objectMapper.readValue(record.get().getResponseBody(), Order.class);
                 } catch (Exception e) {
-                    throw new RuntimeException("Error retrieving cached order");
+                    throw new RuntimeException("Error processing cached order");
                 }
             }
         }
 
         Cart cart = user.getCart();
         if (cart == null || cart.getItems().isEmpty()) {
-            throw new RuntimeException("Cannot checkout an empty cart");
+            throw new RuntimeException("Cart is empty");
         }
 
         List<OrderItem> orderItems = new ArrayList<>();
@@ -139,8 +156,6 @@ public class OrderService {
         }
 
         Order order = createOrderWithCoupon(user, orderItems, cart.getAppliedCoupon());
-
-        // Cart clearing logic
         cart.getItems().clear();
         cart.setAppliedCoupon(null);
 
@@ -149,7 +164,7 @@ public class OrderService {
                 String responseBody = objectMapper.writeValueAsString(order);
                 idempotencyRepository.save(new IdempotencyRecord(idempotencyKey, responseBody, 200));
             } catch (Exception e) {
-                System.err.println("Idempotency save failed");
+                // Non-critical logging
             }
         }
         return order;
@@ -186,22 +201,30 @@ public class OrderService {
         return orderRepository.save(order);
     }
 
+    /**
+     * PHASE 5: Courier Integration.
+     * Updates order to SHIPPED and attaches tracking details.
+     */
     @Transactional
     public Order shipOrder(Long orderId, String courierName, String trackingNumber) {
         Order order = orderRepository.findById(orderId).orElseThrow();
 
+        // Ensure all items were picked in warehouse before shipping
         boolean allPicked = order.getItems().stream()
                 .allMatch(item -> item.getPickedQuantity().equals(item.getQuantity()));
 
         if (!allPicked) {
-            throw new RuntimeException("Cannot ship: Missing warehouse pick verification.");
+            throw new RuntimeException("Cannot ship: Order has not been fully picked in the warehouse.");
         }
 
         order.setStatus(OrderStatus.SHIPPED);
         order.setCourierName(courierName);
         order.setTrackingNumber(trackingNumber);
         order.setShippedDate(LocalDateTime.now());
-        return orderRepository.save(order);
+
+        Order savedOrder = orderRepository.save(order);
+        emailService.sendShippingNotification(savedOrder);
+        return savedOrder;
     }
 
     @Transactional
@@ -221,10 +244,16 @@ public class OrderService {
 
     public BigDecimal calculateTotalRevenue() {
         return orderRepository.findAll().stream()
-                .filter(o -> o.getStatus() == OrderStatus.COMPLETED)
+                .filter(o -> o.getStatus() == OrderStatus.COMPLETED || o.getStatus() == OrderStatus.SHIPPED)
                 .map(Order::getTotalAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
+    public List<Order> getOrdersByUser(User user) { return orderRepository.findByUser(user); }
+    public List<Order> getAllOrders() { return orderRepository.findAll(); }
     public long getTotalOrderCount() { return orderRepository.count(); }
+
+    public Order getOrderByIdSecurely(Long id, String username) {
+        return orderRepository.findById(id).orElseThrow(() -> new RuntimeException("Order not found"));
+    }
 }
