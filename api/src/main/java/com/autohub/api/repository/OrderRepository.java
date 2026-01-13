@@ -11,11 +11,16 @@ import java.util.List;
 
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long> {
+
+    /**
+     * AUDIT #4.1: Retrieve a customer's personal order history.
+     */
     List<Order> findByUser(User user);
 
     /**
-     * Re-written for maximum reliability:
-     * Directly joins Order -> OrderItem -> Part to find a match.
+     * PHASE 4 / AUDIT #9.1: Review Guard Logic.
+     * Ensures only customers with a COMPLETED order for a specific part
+     * can submit a review. Prevents fake ratings.
      */
     @Query("SELECT COUNT(o) > 0 FROM Order o " +
             "JOIN o.items i " +
