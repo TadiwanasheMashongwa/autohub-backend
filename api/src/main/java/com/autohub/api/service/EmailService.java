@@ -40,7 +40,6 @@ public class EmailService {
 
     /**
      * PHASE 6, STEP 2: Trigger 2 - Payment Verified
-     * Updates the customer that picking has started.
      */
     public void sendOrderConfirmation(Order order) {
         String itemsList = order.getItems().stream()
@@ -63,15 +62,24 @@ public class EmailService {
 
     /**
      * PHASE 6, STEP 3: Trigger 3 - Shipped
+     * Provides tracking links and courier details.
      */
     public void sendShippingNotification(Order order) {
-        String subject = "Your Parts are Shipped! - Order #" + order.getId();
+        String subject = "Your Parts are on the Way! - Order #" + order.getId();
         String content = String.format(
-                "<h1>On the Way!</h1>" +
-                        "<p>Your order has been handed over to <strong>%s</strong>.</p>" +
-                        "<p>Tracking Number: <strong>%s</strong></p>" +
-                        "<p>You can track your package on the courier's website.</p>",
-                order.getCourierName(), order.getTrackingNumber()
+                "<h1>Order Shipped!</h1>" +
+                        "<p>Hi %s,</p>" +
+                        "<p>Exciting news! Your order <strong>#%d</strong> has been picked, packed, and handed over to our courier.</p>" +
+                        "<div style='background: #f4f4f4; padding: 15px; border-radius: 5px;'>" +
+                        "<p><strong>Courier:</strong> %s</p>" +
+                        "<p><strong>Tracking Number:</strong> <span style='color: #d9534f; font-weight: bold;'>%s</span></p>" +
+                        "</div>" +
+                        "<p>You can now track your package directly through the courier's portal.</p>" +
+                        "<br><p>Safe driving,<br>AutoHub Logistics</p>",
+                order.getUser().getFirstName(),
+                order.getId(),
+                order.getCourierName(),
+                order.getTrackingNumber()
         );
         sendHtmlEmail(order.getUser().getEmail(), subject, content);
     }
@@ -102,7 +110,7 @@ public class EmailService {
             helper.setText(htmlContent, true);
             mailSender.send(message);
         } catch (MessagingException e) {
-            System.err.println("SMTP Error: " + e.getMessage());
+            System.err.println("Failed to send email: " + e.getMessage());
         }
     }
 }

@@ -78,7 +78,6 @@ public class OrderService {
         Order savedOrder = orderRepository.save(order);
         auditLogRepository.save(new AuditLog("PAYMENT_CONFIRMED", "SYSTEM", "Order #" + orderId + " verified."));
 
-        // TRIGGER 2: Send "Payment Verified - Picking Started" email
         emailService.sendOrderConfirmation(savedOrder);
 
         return savedOrder;
@@ -139,7 +138,6 @@ public class OrderService {
         cart.getItems().clear();
         cart.setAppliedCoupon(null);
 
-        // TRIGGER 1: Send "Order Received" email
         emailService.sendOrderReceivedEmail(order);
 
         if (idempotencyKey != null) {
@@ -182,15 +180,17 @@ public class OrderService {
 
     /**
      * PHASE 5 & 6: Shipping Sync + Trigger 3.
+     * Restored: Critical picked verification before trigger.
      */
     @Transactional
     public Order shipOrder(Long orderId, String courierName, String trackingNumber) {
-        Order order = orderRepository.findById(orderId).orElseThrow();
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
 
         boolean allPicked = order.getItems().stream()
                 .allMatch(item -> item.getPickedQuantity().equals(item.getQuantity()));
 
-        if (!allPicked) throw new RuntimeException("Items not fully picked.");
+        if (!allPicked) throw new RuntimeException("Cannot ship: Not all items have been picked.");
 
         order.setStatus(OrderStatus.SHIPPED);
         order.setCourierName(courierName);
@@ -212,14 +212,9 @@ public class OrderService {
         order.setDeliveryDate(LocalDateTime.now());
 
         Order savedOrder = orderRepository.save(order);
-
-        // TRIGGER 4: Send "Delivered" email
         emailService.sendDeliveryConfirmation(savedOrder);
-
         return savedOrder;
     }
-
-    // ... Rest of the methods (transitOrder, calculateRevenue, processRefund) are fully preserved ...
 
     @Transactional
     public Order transitOrder(Long orderId) {
