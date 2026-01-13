@@ -29,12 +29,23 @@ public class PartController {
         return ResponseEntity.ok(service.searchParts(query, pageable));
     }
 
+    /**
+     * NEW: Quick-Scan endpoint for Warehouse staff.
+     * Returns part details, bin location, and stock levels immediately.
+     */
+    @GetMapping("/scan/{barcode}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CLERK')")
+    public ResponseEntity<Part> getPartByBarcode(@PathVariable String barcode) {
+        return service.getPartByBarcode(barcode)
+                .map(ResponseEntity::ok)
+                .orElseThrow(() -> new RuntimeException("No part found with barcode: " + barcode));
+    }
+
     @GetMapping("/category/{categoryId}")
     public ResponseEntity<Page<Part>> getByCategory(@PathVariable Long categoryId, Pageable pageable) {
         return ResponseEntity.ok(service.getPartsByCategory(categoryId, pageable));
     }
 
-    // NEW: Get parts by vehicle ID
     @GetMapping("/vehicle/{vehicleId}")
     public ResponseEntity<Page<Part>> getByVehicle(@PathVariable Long vehicleId, Pageable pageable) {
         return ResponseEntity.ok(service.getPartsByVehicle(vehicleId, pageable));

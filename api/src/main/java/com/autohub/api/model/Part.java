@@ -3,7 +3,6 @@ package com.autohub.api.model;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
@@ -41,6 +40,9 @@ public class Part {
   private String condition;
   private String imageUrl;
 
+  // NEW: Physical location in the warehouse (e.g., "Aisle 4, Shelf B1")
+  private String binLocation;
+
   @ManyToOne
   @JoinColumn(name = "category_id")
   private Category category;
@@ -65,12 +67,6 @@ public class Part {
 
   public Part() {}
 
-  // Bidirectional Helper
-  public void addReview(Review review) {
-    reviews.add(review);
-    review.setPart(this);
-  }
-
   // --- GETTERS ---
   public Long getId() { return id; }
   public String getName() { return name; }
@@ -83,13 +79,14 @@ public class Part {
   public String getBrand() { return brand; }
   public String getCondition() { return condition; }
   public String getImageUrl() { return imageUrl; }
+  public String getBinLocation() { return binLocation; } // NEW
   public Category getCategory() { return category; }
   public List<Review> getReviews() { return reviews; }
   public Double getAverageRating() { return averageRating; }
   public List<Vehicle> getCompatibleVehicles() { return compatibleVehicles; }
   public Long getVersion() { return version; }
 
-  // --- SETTERS (Fixed to include missing methods) ---
+  // --- SETTERS ---
   public void setId(Long id) { this.id = id; }
   public void setName(String name) { this.name = name; }
   public void setSku(String sku) { this.sku = sku; }
@@ -98,9 +95,10 @@ public class Part {
   public void setDescription(String description) { this.description = description; }
   public void setPrice(BigDecimal price) { this.price = price; }
   public void setStockQuantity(Integer stockQuantity) { this.stockQuantity = stockQuantity; }
-  public void setBrand(String brand) { this.brand = brand; } // FIXED
-  public void setCondition(String condition) { this.condition = condition; } // FIXED
-  public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; } // FIXED
+  public void setBrand(String brand) { this.brand = brand; }
+  public void setCondition(String condition) { this.condition = condition; }
+  public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+  public void setBinLocation(String binLocation) { this.binLocation = binLocation; } // NEW
   public void setCategory(Category category) { this.category = category; }
   public void setReviews(List<Review> reviews) { this.reviews = reviews; }
   public void setAverageRating(Double averageRating) { this.averageRating = averageRating; }
