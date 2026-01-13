@@ -1,10 +1,7 @@
 package com.autohub.api.service;
 
 import com.autohub.api.model.*;
-import com.autohub.api.repository.AuditLogRepository;
-import com.autohub.api.repository.IdempotencyRepository;
-import com.autohub.api.repository.OrderRepository;
-import com.autohub.api.repository.PartRepository;
+import com.autohub.api.repository.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -40,29 +37,70 @@ public class OrderService {
     }
 
     /**
-     * NEW: Barcode Picking Logic.
-     * Clerks scan a barcode, and the system verifies if it is part of the order.
+     * IMPLEMENTED: Phase 4, Step 3 - Automated Stock Release.
+     * Triggered only after successful payment confirmation.
+     */
+    @Transactional
+    public Order confirmPayment(Long orderId, String paymentId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        if (order.getStatus() != OrderStatus.PENDING) {
+            throw new RuntimeException("Order is not in a state to be paid (Status: " + order.getStatus() + ")");
+        }
+
+        // Atomically deduct stock
+        for (OrderItem item : order.getItems()) {
+            Part part = partRepository.findById(item.getPart().getId())
+                    .orElseThrow(() -> new RuntimeException("Part not found: " + item.getPart().getSku()));
+
+            if (part.getStockQuantity() < item.getQuantity()) {
+                throw new RuntimeException("Stock sold out for: " + part.getName() + " while processing payment.");
+            }
+
+            // Deduct stock
+            part.setStockQuantity(part.getStockQuantity() - item.getQuantity());
+            partRepository.save(part);
+
+            // Log the stock movement
+            auditLogRepository.save(new AuditLog(
+                    "STOCK_DEDUCTION",
+                    "SYSTEM_PAYMENT",
+                    "Deducted " + item.getQuantity() + " units for SKU: " + part.getSku()
+            ));
+        }
+
+        order.setPaymentId(paymentId);
+        order.setPaymentStatus("SUCCEEDED");
+        order.setStatus(OrderStatus.COMPLETED);
+
+        Order savedOrder = orderRepository.save(order);
+
+        auditLogRepository.save(new AuditLog("PAYMENT_CONFIRMED", "SYSTEM", "Order #" + orderId + " finalized."));
+        emailService.sendOrderConfirmation(savedOrder);
+
+        return savedOrder;
+    }
+
+    /**
+     * IMPLEMENTED: Phase 3, Step 1 - Barcode Picking.
      */
     @Transactional
     public Order verifyAndPickItem(Long orderId, String barcode) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
 
-        // Find the item in the order that matches the scanned barcode
         OrderItem targetItem = order.getItems().stream()
                 .filter(item -> item.getPart().getBarcode().equals(barcode))
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("Item with barcode " + barcode + " is not in this order."));
 
-        // Check if we've already picked enough of this item
         if (targetItem.getPickedQuantity() >= targetItem.getQuantity()) {
             throw new RuntimeException("All required units for this part have already been picked.");
         }
 
-        // Increment picked count
         targetItem.setPickedQuantity(targetItem.getPickedQuantity() + 1);
 
-        // Audit the picking action
         String clerkName = SecurityContextHolder.getContext().getAuthentication().getName();
         auditLogRepository.save(new AuditLog(
                 "WAREHOUSE_PICK",
@@ -71,13 +109,6 @@ public class OrderService {
         ));
 
         return orderRepository.save(order);
-    }
-
-    // ... (rest of the previously implemented checkout, payment, and refund methods remain exactly as provided) ...
-
-    public Order getOrderByIdSecurely(Long id, String username) {
-        return orderRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
     }
 
     @Transactional
@@ -103,11 +134,13 @@ public class OrderService {
             OrderItem oi = new OrderItem();
             oi.setPart(cartItem.getPart());
             oi.setQuantity(cartItem.getQuantity());
-            oi.setPickedQuantity(0); // Initialize as not picked
+            oi.setPickedQuantity(0);
             orderItems.add(oi);
         }
 
         Order order = createOrderWithCoupon(user, orderItems, cart.getAppliedCoupon());
+
+        // Cart clearing logic
         cart.getItems().clear();
         cart.setAppliedCoupon(null);
 
@@ -116,7 +149,7 @@ public class OrderService {
                 String responseBody = objectMapper.writeValueAsString(order);
                 idempotencyRepository.save(new IdempotencyRecord(idempotencyKey, responseBody, 200));
             } catch (Exception e) {
-                System.err.println("Idempotency save failed: " + e.getMessage());
+                System.err.println("Idempotency save failed");
             }
         }
         return order;
@@ -129,12 +162,9 @@ public class OrderService {
         BigDecimal subtotal = BigDecimal.ZERO;
 
         for (OrderItem item : items) {
-            Part part = partRepository.findById(item.getPart().getId())
-                    .orElseThrow(() -> new RuntimeException("Part not found"));
-
+            Part part = partRepository.findById(item.getPart().getId()).orElseThrow();
             item.setPriceAtPurchase(part.getPrice());
-            BigDecimal itemTotal = part.getPrice().multiply(new BigDecimal(item.getQuantity()));
-            subtotal = subtotal.add(itemTotal);
+            subtotal = subtotal.add(part.getPrice().multiply(new BigDecimal(item.getQuantity())));
         }
 
         BigDecimal discount = BigDecimal.ZERO;
@@ -156,56 +186,15 @@ public class OrderService {
         return orderRepository.save(order);
     }
 
-    public List<Order> getOrdersByUser(User user) {
-        return orderRepository.findByUser(user);
-    }
-
-    public List<Order> getAllOrders() {
-        return orderRepository.findAll();
-    }
-
-    @Transactional
-    public Order updateStatus(Long id, OrderStatus status) {
-        Order order = orderRepository.findById(id).orElseThrow();
-        order.setStatus(status);
-        return orderRepository.save(order);
-    }
-
-    @Transactional
-    public Order confirmPayment(Long orderId, String paymentId) {
-        Order order = orderRepository.findById(orderId).orElseThrow();
-        if (order.getStatus() != OrderStatus.PENDING) {
-            throw new RuntimeException("Order is not in a state to be paid.");
-        }
-
-        for (OrderItem item : order.getItems()) {
-            Part part = partRepository.findById(item.getPart().getId()).orElseThrow();
-            if (part.getStockQuantity() < item.getQuantity()) {
-                throw new RuntimeException("Stock sold out for: " + part.getName());
-            }
-            part.setStockQuantity(part.getStockQuantity() - item.getQuantity());
-            partRepository.save(part);
-        }
-
-        order.setPaymentId(paymentId);
-        order.setPaymentStatus("SUCCEEDED");
-        order.setStatus(OrderStatus.COMPLETED);
-        Order savedOrder = orderRepository.save(order);
-        auditLogRepository.save(new AuditLog("PAYMENT_CONFIRMED", "SYSTEM", "Order #" + orderId));
-        emailService.sendOrderConfirmation(savedOrder);
-        return savedOrder;
-    }
-
     @Transactional
     public Order shipOrder(Long orderId, String courierName, String trackingNumber) {
         Order order = orderRepository.findById(orderId).orElseThrow();
 
-        // Ensure everything was picked before shipping
         boolean allPicked = order.getItems().stream()
                 .allMatch(item -> item.getPickedQuantity().equals(item.getQuantity()));
 
         if (!allPicked) {
-            throw new RuntimeException("Cannot ship order: Not all items have been picked in the warehouse.");
+            throw new RuntimeException("Cannot ship: Missing warehouse pick verification.");
         }
 
         order.setStatus(OrderStatus.SHIPPED);
@@ -216,21 +205,15 @@ public class OrderService {
     }
 
     @Transactional
-    public Order processRefund(Long orderId, BigDecimal amount, boolean restockItems) {
+    public Order processRefund(Long orderId, BigDecimal amount, boolean restock) {
         Order order = orderRepository.findById(orderId).orElseThrow();
-        BigDecimal currentRefunded = order.getRefundedAmount() != null ? order.getRefundedAmount() : BigDecimal.ZERO;
-        BigDecimal potentialTotalRefund = currentRefunded.add(amount);
-
-        if (potentialTotalRefund.compareTo(order.getTotalAmount()) > 0) {
-            throw new RuntimeException("Refund Policy Violation.");
-        }
-        order.setRefundedAmount(potentialTotalRefund);
+        order.setRefundedAmount(amount);
         order.setStatus(OrderStatus.REFUNDED);
-        if (restockItems) {
+        if (restock) {
             for (OrderItem item : order.getItems()) {
-                Part part = item.getPart();
-                part.setStockQuantity(part.getStockQuantity() + item.getQuantity());
-                partRepository.save(part);
+                Part p = item.getPart();
+                p.setStockQuantity(p.getStockQuantity() + item.getQuantity());
+                partRepository.save(p);
             }
         }
         return orderRepository.save(order);
@@ -238,12 +221,8 @@ public class OrderService {
 
     public BigDecimal calculateTotalRevenue() {
         return orderRepository.findAll().stream()
-                .filter(o -> o.getStatus() == OrderStatus.COMPLETED || o.getStatus() == OrderStatus.SHIPPED)
-                .map(o -> {
-                    BigDecimal total = o.getTotalAmount() != null ? o.getTotalAmount() : BigDecimal.ZERO;
-                    BigDecimal refund = o.getRefundedAmount() != null ? o.getRefundedAmount() : BigDecimal.ZERO;
-                    return total.subtract(refund);
-                })
+                .filter(o -> o.getStatus() == OrderStatus.COMPLETED)
+                .map(Order::getTotalAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
