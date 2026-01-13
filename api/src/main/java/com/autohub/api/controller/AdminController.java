@@ -18,6 +18,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * COMMAND CENTER: Managed by Mike and his Warehouse Staff.
+ * Synchronized with Master 53-endpoint list (v10.4.6).
+ */
 @RestController
 @RequestMapping("/api/v1/admin")
 @PreAuthorize("hasAnyRole('ADMIN', 'CLERK')")
@@ -38,9 +42,11 @@ public class AdminController {
         this.authenticationService = authenticationService;
     }
 
+    // --- WAREHOUSE & LOGISTICS (Admin + Clerk) ---
+
     /**
-     * PHASE 3: Warehouse Picking Verification.
-     * New: Allows clerks to scan a barcode to fulfill an item in an order.
+     * ENDPOINT #44: Warehouse Picking Verification.
+     * Ensures the correct part is in the box before shipping.
      */
     @PostMapping("/orders/{orderId}/pick")
     public ResponseEntity<Order> verifyAndPick(
@@ -49,6 +55,9 @@ public class AdminController {
         return ResponseEntity.ok(orderService.verifyAndPickItem(orderId, barcode));
     }
 
+    /**
+     * ENDPOINT #45: Logistics Processing.
+     */
     @PostMapping("/orders/{orderId}/ship")
     public ResponseEntity<Order> shipOrder(
             @PathVariable Long orderId,
@@ -58,24 +67,34 @@ public class AdminController {
     }
 
     /**
-     * PHASE 5: Transition order to IN_TRANSIT.
-     * New: Used when the courier has collected the package.
+     * ENDPOINT #46: Transition order to IN_TRANSIT.
      */
     @PatchMapping("/orders/{orderId}/transit")
     public ResponseEntity<Order> setInTransit(@PathVariable Long orderId) {
         return ResponseEntity.ok(orderService.transitOrder(orderId));
     }
 
+    /**
+     * ENDPOINT #50: Packing Slip Generation.
+     */
     @GetMapping("/orders/{orderId}/manifest")
     public ResponseEntity<Map<String, Object>> getManifest(@PathVariable Long orderId) {
         return ResponseEntity.ok(orderService.getOrderManifest(orderId));
     }
 
+    /**
+     * ENDPOINT #24: Quick-Scan restock for arriving shipments.
+     */
     @PatchMapping("/inventory/restock")
     public ResponseEntity<Part> restock(@RequestParam String barcode, @RequestParam Integer quantity) {
-        return ResponseEntity.ok(partService.restockByBarcode(barcode, quantity));
+        return ResponseEntity.ok(partService.updateStockByBarcode(barcode, quantity));
     }
 
+    // --- ADMIN-ONLY OPERATIONS ---
+
+    /**
+     * ENDPOINT #8: Internal Staff Onboarding.
+     */
     @PostMapping("/create-clerk")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> createClerk(@RequestBody RegisterRequest request) {
@@ -90,6 +109,9 @@ public class AdminController {
         }
     }
 
+    /**
+     * ENDPOINT #51: Dashboard Financials & Alerts.
+     */
     @GetMapping("/stats")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> getDashboardStats() {
@@ -97,22 +119,31 @@ public class AdminController {
         stats.put("totalRevenue", orderService.calculateTotalRevenue());
         stats.put("totalOrders", orderService.getTotalOrderCount());
         stats.put("totalCustomers", userRepository.countByRoleName("ROLE_CUSTOMER"));
-        stats.put("lowStockCount", partService.getLowStockPartsList(5).size());
+        stats.put("lowStockCount", partService.getLowStockParts().size());
         return ResponseEntity.ok(stats);
     }
 
+    /**
+     * ENDPOINT #25: Manual Inventory Override.
+     */
     @PatchMapping("/inventory/{partId}/stock")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Part> adjustStock(@PathVariable Long partId, @RequestParam Integer quantity) {
-        return ResponseEntity.ok(partService.updateStock(partId, quantity));
+        return ResponseEntity.ok(partService.manualStockAdjustment(partId, quantity));
     }
 
+    /**
+     * ENDPOINT #11: CRM - Customer Management.
+     */
     @GetMapping("/customers")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<User>> getAllCustomers() {
         return ResponseEntity.ok(userRepository.findAllCustomers());
     }
 
+    /**
+     * ENDPOINT #49: Financial Reconciliation.
+     */
     @PostMapping("/orders/{orderId}/refund")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Order> issueRefund(
