@@ -61,4 +61,36 @@ public class PartController {
     public ResponseEntity<Part> getPartById(@PathVariable Long id) {
         return ResponseEntity.ok(service.getPartById(id));
     }
+
+    /**
+     * AUDIT #11.6: Delete Part.
+     * Allows Admin to remove a SKU from the catalog.
+     */
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deletePart(@PathVariable Long id) {
+        service.deletePart(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * PHASE 3: Fitment Mapping.
+     * Links a spare part to a specific vehicle model.
+     */
+    @PostMapping("/{partId}/compatibility/{vehicleId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> addVehicleCompatibility(@PathVariable Long partId, @PathVariable Long vehicleId) {
+        service.addVehicleCompatibility(partId, vehicleId);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * PHASE 3: Remove Fitment Mapping.
+     */
+    @DeleteMapping("/{partId}/compatibility/{vehicleId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> removeVehicleCompatibility(@PathVariable Long partId, @PathVariable Long vehicleId) {
+        service.removeVehicleCompatibility(partId, vehicleId);
+        return ResponseEntity.ok().build();
+    }
 }
