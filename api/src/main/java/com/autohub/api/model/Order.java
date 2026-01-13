@@ -27,13 +27,13 @@ public class Order {
     private BigDecimal totalAmount;
     private BigDecimal discountAmount = BigDecimal.ZERO;
     private BigDecimal refundedAmount = BigDecimal.ZERO;
+
     private String returnReason;
     private String couponCode;
-
     private String trackingNumber;
     private String courierName;
     private LocalDateTime shippedDate;
-    private LocalDateTime deliveryDate; // Added for Phase 5 logistics
+    private LocalDateTime deliveryDate;
 
     private String paymentId;
     private String paymentStatus;

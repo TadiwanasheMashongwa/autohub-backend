@@ -38,37 +38,23 @@ public class AdminController {
         this.authenticationService = authenticationService;
     }
 
-    /**
-     * PHASE 5, STEP 2: Courier Tracking Sync.
-     * Endpoint for clerks to mark an order as SHIPPED and provide tracking info.
-     */
     @PostMapping("/orders/{orderId}/ship")
     public ResponseEntity<Order> shipOrder(
             @PathVariable Long orderId,
             @RequestParam String courierName,
             @RequestParam String trackingNumber) {
-        // Calls the synchronized OrderService logic that validates picking status first
         return ResponseEntity.ok(orderService.shipOrder(orderId, courierName, trackingNumber));
     }
 
-    /**
-     * PHASE 5, STEP 1: Manifest Retrieval.
-     * Allows clerks to view the shipping manifest (weight/volume) for a specific order.
-     */
     @GetMapping("/orders/{orderId}/manifest")
     public ResponseEntity<Map<String, Object>> getManifest(@PathVariable Long orderId) {
         return ResponseEntity.ok(orderService.getOrderManifest(orderId));
     }
 
-    /**
-     * PHASE 3: Scan-to-Restock.
-     */
     @PatchMapping("/inventory/restock")
     public ResponseEntity<Part> restock(@RequestParam String barcode, @RequestParam Integer quantity) {
         return ResponseEntity.ok(partService.restockByBarcode(barcode, quantity));
     }
-
-    // --- ADMINISTRATIVE & ANALYTICS ---
 
     @PostMapping("/create-clerk")
     @PreAuthorize("hasRole('ADMIN')")
