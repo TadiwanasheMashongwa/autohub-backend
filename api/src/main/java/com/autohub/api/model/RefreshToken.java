@@ -1,4 +1,4 @@
-package com.autohub.entity;
+package com.autohub.api.model;
 
 import com.autohub.api.model.User;
 import jakarta.persistence.*;
