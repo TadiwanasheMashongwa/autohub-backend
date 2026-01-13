@@ -3,6 +3,7 @@ package com.autohub.api.controller;
 import com.autohub.api.model.Order;
 import com.autohub.api.service.OrderService;
 import com.autohub.api.service.PaymentService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,27 +21,48 @@ public class PaymentController {
         this.orderService = orderService;
     }
 
-    /**
-     * Endpoint to start the payment process for an order.
-     */
     @PostMapping("/initiate/{orderId}")
     public ResponseEntity<Map<String, String>> initiatePayment(@PathVariable Long orderId) {
         return ResponseEntity.ok(paymentService.initiatePayment(orderId));
     }
 
     /**
-     * Mock Confirmation endpoint.
-     * In production, this would be a secure Webhook or a Redirect URL.
+     * SECURE WEBHOOK: This endpoint is called directly by the Payment Gateway.
+     * It uses a 'X-Gateway-Token' header to verify the source.
+     */
+    @PostMapping("/webhook")
+    public ResponseEntity<String> handleGatewayCallback(
+            @RequestHeader("X-Gateway-Token") String signature,
+            @RequestBody Map<String, String> payload) {
+
+        // 1. Authenticate the source
+        if (!paymentService.isValidWebhookSignature(signature)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Signature");
+        }
+
+        // 2. Extract Data
+        String paymentId = payload.get("paymentId");
+        Long orderId = Long.parseLong(payload.get("orderId"));
+        String status = payload.get("status");
+
+        // 3. Process Success
+        if ("PAID".equalsIgnoreCase(status)) {
+            paymentService.updateTransactionStatus(paymentId, "SUCCESS");
+            orderService.confirmPayment(orderId, paymentId);
+            return ResponseEntity.ok("Webhook Processed Successfully");
+        }
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Payment Failed or Pending");
+    }
+
+    /**
+     * Standard user-facing confirmation (should only be used for UI redirection).
      */
     @PostMapping("/confirm")
     public ResponseEntity<Order> confirmPayment(@RequestBody Map<String, String> request) {
         Long orderId = Long.parseLong(request.get("orderId"));
-        String paymentId = request.get("paymentId"); // The reference from the gateway
-
-        // 1. Update the ledger
+        String paymentId = request.get("paymentId");
         paymentService.updateTransactionStatus(paymentId, "SUCCESS");
-
-        // 2. Finalize the order (Stock deduction & status update)
         return ResponseEntity.ok(orderService.confirmPayment(orderId, paymentId));
     }
 }
