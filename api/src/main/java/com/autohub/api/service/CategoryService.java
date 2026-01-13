@@ -24,6 +24,9 @@ public class CategoryService {
                 .orElseThrow(() -> new RuntimeException("Category not found with id: " + id));
     }
 
+    /**
+     * AUDIT #8.2: Logic to create a new category with duplicate check.
+     */
     @Transactional
     public Category createCategory(Category category) {
         if (categoryRepository.findByName(category.getName()).isPresent()) {
@@ -32,6 +35,9 @@ public class CategoryService {
         return categoryRepository.save(category);
     }
 
+    /**
+     * AUDIT #8.4: Logic to update metadata while maintaining name uniqueness.
+     */
     @Transactional
     public Category updateCategory(Long id, Category details) {
         Category category = getCategoryById(id);
@@ -49,6 +55,9 @@ public class CategoryService {
         return categoryRepository.save(category);
     }
 
+    /**
+     * AUDIT #8.5: Delete category logic.
+     */
     @Transactional
     public void deleteCategory(Long id) {
         Category category = getCategoryById(id);
