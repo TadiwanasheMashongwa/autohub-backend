@@ -1,11 +1,14 @@
 package com.autohub.api.service;
 
 import com.autohub.api.model.Order;
+import com.autohub.api.model.OrderItem;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+
+import java.util.stream.Collectors;
 
 @Service
 public class EmailService {
@@ -19,54 +22,67 @@ public class EmailService {
 
     /**
      * PHASE 6, STEP 1: Trigger 1 - Checkout
-     * "Order Received - Awaiting Payment"
      */
     public void sendOrderReceivedEmail(Order order) {
         String subject = "Order Received - Action Required: Order #" + order.getId();
         String content = String.format(
                 "<h1>Order Received</h1>" +
                         "<p>Hi %s,</p>" +
-                        "<p>We've received your order for spare parts! Your order ID is <strong>#%d</strong>.</p>" +
+                        "<p>We've received your order <strong>#%d</strong>.</p>" +
                         "<p><strong>Status:</strong> Awaiting Payment</p>" +
                         "<p>Total Amount: $%s</p>" +
-                        "<p>Please proceed to the payment gateway to complete your purchase so we can begin picking your items.</p>" +
+                        "<p>Please complete your payment so we can start preparing your shipment.</p>" +
                         "<br><p>Best Regards,<br>AutoHub Team</p>",
-                order.getUser().getFirstName(),
-                order.getId(),
-                order.getTotalAmount().toString()
+                order.getUser().getFirstName(), order.getId(), order.getTotalAmount()
         );
         sendHtmlEmail(order.getUser().getEmail(), subject, content);
     }
 
     /**
-     * Placeholder for Phase 6, Step 2: Payment Verified
+     * PHASE 6, STEP 2: Trigger 2 - Payment Verified
+     * Updates the customer that picking has started.
      */
     public void sendOrderConfirmation(Order order) {
-        String subject = "Payment Verified - Order #" + order.getId();
-        String content = "<h1>Payment Received!</h1><p>We are now picking your items in the warehouse.</p>";
-        sendHtmlEmail(order.getUser().getEmail(), subject, content);
-    }
+        String itemsList = order.getItems().stream()
+                .map(item -> "<li>" + item.getQuantity() + "x " + item.getPart().getName() + "</li>")
+                .collect(Collectors.joining());
 
-    /**
-     * Placeholder for Phase 6, Step 3: Shipped
-     */
-    public void sendShippingNotification(Order order) {
-        String subject = "Order Shipped! - Order #" + order.getId();
+        String subject = "Payment Confirmed - Preparing Your Order #" + order.getId();
         String content = String.format(
-                "<h1>Your Parts are on the Way!</h1>" +
-                        "<p>Courier: %s</p><p>Tracking Number: %s</p>",
-                order.getCourierName(),
-                order.getTrackingNumber()
+                "<h1>Payment Verified!</h1>" +
+                        "<p>Great news, %s!</p>" +
+                        "<p>We've received your payment for order <strong>#%d</strong>. Our warehouse team is now picking your items from the shelves.</p>" +
+                        "<h3>Order Summary:</h3>" +
+                        "<ul>%s</ul>" +
+                        "<p>You will receive another update as soon as your parts are with the courier.</p>" +
+                        "<br><p>Best Regards,<br>AutoHub Warehouse Team</p>",
+                order.getUser().getFirstName(), order.getId(), itemsList
         );
         sendHtmlEmail(order.getUser().getEmail(), subject, content);
     }
 
     /**
-     * Placeholder for Phase 6, Step 4: Delivered
+     * PHASE 6, STEP 3: Trigger 3 - Shipped
+     */
+    public void sendShippingNotification(Order order) {
+        String subject = "Your Parts are Shipped! - Order #" + order.getId();
+        String content = String.format(
+                "<h1>On the Way!</h1>" +
+                        "<p>Your order has been handed over to <strong>%s</strong>.</p>" +
+                        "<p>Tracking Number: <strong>%s</strong></p>" +
+                        "<p>You can track your package on the courier's website.</p>",
+                order.getCourierName(), order.getTrackingNumber()
+        );
+        sendHtmlEmail(order.getUser().getEmail(), subject, content);
+    }
+
+    /**
+     * PHASE 6, STEP 4: Trigger 4 - Delivered
      */
     public void sendDeliveryConfirmation(Order order) {
-        String subject = "Package Delivered - Order #" + order.getId();
-        String content = "<h1>Enjoy your parts!</h1><p>Please rate your experience on our platform.</p>";
+        String subject = "Delivered: Order #" + order.getId();
+        String content = "<h1>Package Delivered!</h1>" +
+                "<p>We hope the parts are exactly what you needed. Please log in to leave a review!</p>";
         sendHtmlEmail(order.getUser().getEmail(), subject, content);
     }
 
@@ -86,7 +102,7 @@ public class EmailService {
             helper.setText(htmlContent, true);
             mailSender.send(message);
         } catch (MessagingException e) {
-            System.err.println("Failed to send email to " + to + ": " + e.getMessage());
+            System.err.println("SMTP Error: " + e.getMessage());
         }
     }
 }
