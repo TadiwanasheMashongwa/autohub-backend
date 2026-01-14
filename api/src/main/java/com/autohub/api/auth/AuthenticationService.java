@@ -188,17 +188,27 @@ public class AuthenticationService {
 
     /**
      * AUDIT #1.10: Complete Password Recovery.
+     * FIX: Invalidates active sessions by clearing the Refresh Token.
      */
     @Transactional
     public void completePasswordReset(String token, String newPassword) {
         User user = repository.findByResetToken(token)
                 .orElseThrow(() -> new RuntimeException("Invalid or expired token"));
+
         if (user.getResetTokenExpiry().isBefore(LocalDateTime.now())) {
             throw new RuntimeException("Token expired");
         }
+
+        // 1. Update Password
         user.setPassword(passwordEncoder.encode(newPassword));
+
+        // 2. Clear Reset Metadata
         user.setResetToken(null);
         user.setResetTokenExpiry(null);
+
+        // 3. FORCE LOGOUT: Clear the stored refresh token to invalidate existing sessions
+        user.setRefreshToken(null);
+
         repository.save(user);
     }
 
