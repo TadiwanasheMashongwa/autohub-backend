@@ -4,7 +4,6 @@ import com.autohub.api.model.Cart;
 import com.autohub.api.model.CartItem;
 import com.autohub.api.model.Part;
 import com.autohub.api.model.User;
-import com.autohub.api.repository.CartItemRepository;
 import com.autohub.api.repository.CartRepository;
 import com.autohub.api.repository.PartRepository;
 import org.springframework.stereotype.Service;
@@ -16,74 +15,57 @@ import java.util.Optional;
 public class CartService {
 
     private final CartRepository cartRepository;
-    private final CartItemRepository cartItemRepository;
     private final PartRepository partRepository;
 
-    public CartService(
-            CartRepository cartRepository,
-            CartItemRepository cartItemRepository,
-            PartRepository partRepository
-    ) {
+    public CartService(CartRepository cartRepository, PartRepository partRepository) {
         this.cartRepository = cartRepository;
-        this.cartItemRepository = cartItemRepository;
         this.partRepository = partRepository;
     }
 
-    /**
-     * Retrieve the user's cart or create one if it doesn't exist.
-     */
     public Cart getCart(User user) {
         return cartRepository.findByUser(user)
                 .orElseGet(() -> cartRepository.save(new Cart(user)));
     }
 
-    /**
-     * Add or update an item in the cart.
-     * IMPORTANT: Cart expresses intent ONLY.
-     * No stock or availability enforcement happens here.
-     */
     @Transactional
     public Cart addItemToCart(User user, Long partId, Integer quantity) {
-        if (quantity == null || quantity <= 0) {
-            throw new RuntimeException("Quantity must be greater than zero.");
+        Cart cart = getCart(user);
+        Part part = partRepository.findById(partId)
+                .orElseThrow(() -> new RuntimeException("Part not found: " + partId));
+
+        if (part.getStockQuantity() < quantity) {
+            throw new RuntimeException("Insufficient stock");
         }
 
-        Cart cart = getCart(user);
-
-        Part part = partRepository.findById(partId)
-                .orElseThrow(() -> new RuntimeException("Part not found with ID: " + partId));
-
-        Optional<CartItem> existingItem = cart.getItems().stream()
-                .filter(item -> item.getPart().getId().equals(partId))
+        Optional<CartItem> existing = cart.getItems()
+                .stream()
+                .filter(i -> i.getPart().getId().equals(partId))
                 .findFirst();
 
-        if (existingItem.isPresent()) {
-            CartItem item = existingItem.get();
-            item.setQuantity(item.getQuantity() + quantity);
+        if (existing.isPresent()) {
+            int newQty = existing.get().getQuantity() + quantity;
+            if (part.getStockQuantity() < newQty) {
+                throw new RuntimeException("Stock exceeded");
+            }
+            existing.get().setQuantity(newQty);
         } else {
-            CartItem newItem = new CartItem();
-            newItem.setCart(cart);
-            newItem.setPart(part);
-            newItem.setQuantity(quantity);
-            cart.getItems().add(newItem);
+            CartItem item = new CartItem();
+            item.setCart(cart);
+            item.setPart(part);
+            item.setQuantity(quantity);
+            cart.getItems().add(item);
         }
 
         return cartRepository.save(cart);
     }
 
-    /**
-     * Remove a specific item from the cart.
-     */
     @Transactional
     public Cart removeItemFromCart(User user, Long cartItemId) {
         Cart cart = getCart(user);
-        cart.getItems().removeIf(item -> item.getId().equals(cartItemId));
+        cart.getItems().removeIf(i -> i.getId().equals(cartItemId));
         return cartRepository.save(cart);
     }
 
-    /**
-     * Clear the cart entirely.
-     */
     @Transactional
     public void clearCart(User user) {
         Cart cart = getCart(user);
