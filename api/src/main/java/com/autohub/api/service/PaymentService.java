@@ -25,9 +25,11 @@ public class PaymentService {
     @Value("${app.payment.webhook-secret:ah_default_secret}")
     private String webhookSecret;
 
-    public PaymentService(OrderRepository orderRepository,
-                          TransactionRepository transactionRepository,
-                          AuditLogRepository auditLogRepository) {
+    public PaymentService(
+            OrderRepository orderRepository,
+            TransactionRepository transactionRepository,
+            AuditLogRepository auditLogRepository
+    ) {
         this.orderRepository = orderRepository;
         this.transactionRepository = transactionRepository;
         this.auditLogRepository = auditLogRepository;
@@ -37,12 +39,19 @@ public class PaymentService {
         return webhookSecret.equals(receivedSignature);
     }
 
+    /**
+     * STEP 5 — Payment initiation ONLY
+     */
     @Transactional
     public Map<String, String> initiatePayment(Long orderId) {
+
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
 
-        String gatewayRef = "AH-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        String gatewayRef = "AH-" + UUID.randomUUID()
+                .toString()
+                .substring(0, 8)
+                .toUpperCase();
 
         transactionRepository.save(
                 new Transaction(

@@ -19,6 +19,7 @@ public class OrderService {
     private final CartRepository cartRepository;
     private final IdempotencyRepository idempotencyRepository;
     private final EmailService emailService;
+    private final InventoryService inventoryService;
     private final ObjectMapper objectMapper;
 
     public OrderService(
@@ -27,6 +28,7 @@ public class OrderService {
             CartRepository cartRepository,
             IdempotencyRepository idempotencyRepository,
             EmailService emailService,
+            InventoryService inventoryService,
             ObjectMapper objectMapper
     ) {
         this.orderRepository = orderRepository;
@@ -34,9 +36,13 @@ public class OrderService {
         this.cartRepository = cartRepository;
         this.idempotencyRepository = idempotencyRepository;
         this.emailService = emailService;
+        this.inventoryService = inventoryService;
         this.objectMapper = objectMapper;
     }
 
+    /**
+     * STEP 5 — Checkout creates order + reserves inventory
+     */
     @Transactional
     public Order checkoutCart(User user, String idempotencyKey) {
 
@@ -63,6 +69,7 @@ public class OrderService {
 
         Order order = new Order();
         order.setUser(user);
+        order.setStatus(OrderStatus.PENDING);
 
         List<OrderItem> items = new ArrayList<>();
         BigDecimal total = BigDecimal.ZERO;
@@ -71,14 +78,11 @@ public class OrderService {
             Part part = partRepository.findById(ci.getPart().getId())
                     .orElseThrow(() -> new RuntimeException("Part missing"));
 
-            if (part.getStockQuantity() < ci.getQuantity()) {
-                throw new RuntimeException("Insufficient stock for SKU " + part.getSku());
-            }
-
             OrderItem oi = new OrderItem();
             oi.setPart(part);
             oi.setQuantity(ci.getQuantity());
             oi.setPriceAtPurchase(part.getPrice());
+
             items.add(oi);
 
             total = total.add(
@@ -88,27 +92,29 @@ public class OrderService {
 
         order.setItems(items);
         order.setTotalAmount(total);
-        order.setStatus(OrderStatus.PENDING);
 
-        Order saved = orderRepository.save(order);
+        Order savedOrder = orderRepository.save(order);
+
+        // 🔒 Inventory is RESERVED here (not deducted)
+        inventoryService.reserveInventory(savedOrder);
 
         cart.getItems().clear();
         cartRepository.save(cart);
 
-        emailService.sendOrderReceivedEmail(saved);
+        emailService.sendOrderReceivedEmail(savedOrder);
 
         if (idempotencyKey != null) {
             try {
                 idempotencyRepository.save(
                         new IdempotencyRecord(
                                 idempotencyKey,
-                                objectMapper.writeValueAsString(saved),
+                                objectMapper.writeValueAsString(savedOrder),
                                 200
                         )
                 );
             } catch (Exception ignored) {}
         }
 
-        return saved;
+        return savedOrder;
     }
 }

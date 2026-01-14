@@ -1,7 +1,10 @@
 package com.autohub.api.service;
 
-import com.autohub.api.model.*;
-import com.autohub.api.repository.*;
+import com.autohub.api.model.Order;
+import com.autohub.api.model.OrderStatus;
+import com.autohub.api.model.Transaction;
+import com.autohub.api.repository.OrderRepository;
+import com.autohub.api.repository.TransactionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -9,78 +12,55 @@ import org.springframework.transaction.annotation.Transactional;
 public class PaymentOrchestratorService {
 
     private final OrderRepository orderRepository;
-    private final PartRepository partRepository;
     private final TransactionRepository transactionRepository;
+    private final InventoryService inventoryService;
     private final EmailService emailService;
 
     public PaymentOrchestratorService(
             OrderRepository orderRepository,
-            PartRepository partRepository,
             TransactionRepository transactionRepository,
+            InventoryService inventoryService,
             EmailService emailService
     ) {
         this.orderRepository = orderRepository;
-        this.partRepository = partRepository;
         this.transactionRepository = transactionRepository;
+        this.inventoryService = inventoryService;
         this.emailService = emailService;
     }
 
     /**
-     * STEP 4 — SINGLE AUTHORITATIVE PAYMENT FINALIZATION
-     *
-     * Invariants:
-     * - Idempotent
-     * - Inventory deducted once
-     * - Order transitions once
+     * STEP 5 — Idempotent payment finalization
      */
     @Transactional
     public Order finalizePayment(Long orderId, String gatewayReference) {
 
-        Transaction transaction = transactionRepository
+        Transaction tx = transactionRepository
                 .findByGatewayReference(gatewayReference)
-                .orElseThrow(() -> new RuntimeException("Transaction not found: " + gatewayReference));
+                .orElseThrow(() -> new RuntimeException("Transaction not found"));
 
-        // 🔒 Idempotency guard
-        if ("SUCCESS".equals(transaction.getStatus())) {
-            return transaction.getOrder();
+        if ("SUCCESS".equals(tx.getStatus())) {
+            return tx.getOrder(); // idempotent
         }
 
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+                .orElseThrow(() -> new RuntimeException("Order not found"));
 
-        // 🔐 State guard
         if (order.getStatus() != OrderStatus.PENDING) {
-            throw new RuntimeException(
-                    "Order is not eligible for payment finalization. Current state: " + order.getStatus()
-            );
+            throw new RuntimeException("Order not in payable state");
         }
 
-        // 1️⃣ Mark transaction successful
-        transaction.setStatus("SUCCESS");
-        transactionRepository.save(transaction);
+        tx.setStatus("SUCCESS");
+        transactionRepository.save(tx);
 
-        // 2️⃣ Deduct inventory ONCE
-        for (OrderItem item : order.getItems()) {
-            Part part = item.getPart();
+        inventoryService.deductReservedInventory(order);
 
-            if (part.getStockQuantity() < item.getQuantity()) {
-                throw new RuntimeException("Insufficient stock for SKU: " + part.getSku());
-            }
-
-            part.setStockQuantity(part.getStockQuantity() - item.getQuantity());
-            partRepository.save(part);
-        }
-
-        // 3️⃣ Transition order state
-        order.setPaymentId(gatewayReference);
-        order.setPaymentStatus("PAID");
         order.setStatus(OrderStatus.PAID);
+        order.setPaymentId(gatewayReference);
 
-        Order savedOrder = orderRepository.save(order);
+        Order saved = orderRepository.save(order);
 
-        // 4️⃣ Side effect (exactly once)
-        emailService.sendOrderConfirmation(savedOrder);
+        emailService.sendOrderConfirmation(saved);
 
-        return savedOrder;
+        return saved;
     }
 }
