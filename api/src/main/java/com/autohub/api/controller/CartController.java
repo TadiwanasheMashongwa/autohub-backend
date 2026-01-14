@@ -26,37 +26,28 @@ public class CartController {
         this.userRepository = userRepository;
     }
 
-    /**
-     * AUDIT #2.1: View active cart.
-     */
     @GetMapping
     public ResponseEntity<Cart> getCart(Authentication authentication) {
         User user = getUserFromAuth(authentication);
         return ResponseEntity.ok(cartService.getCart(user));
     }
 
-    /**
-     * AUDIT #2.2: Add part to cart or update quantity.
-     */
     @PostMapping("/add")
-    public ResponseEntity<Cart> addItem(@RequestParam Long partId, @RequestParam Integer quantity, Authentication authentication) {
+    public ResponseEntity<Cart> addItem(
+            @RequestParam Long partId,
+            @RequestParam Integer quantity,
+            Authentication authentication
+    ) {
         User user = getUserFromAuth(authentication);
         return ResponseEntity.ok(cartService.addItemToCart(user, partId, quantity));
     }
 
-    /**
-     * AUDIT #2.3: Remove specific item from cart.
-     */
     @DeleteMapping("/item/{id}")
     public ResponseEntity<Cart> removeItem(@PathVariable Long id, Authentication authentication) {
         User user = getUserFromAuth(authentication);
         return ResponseEntity.ok(cartService.removeItemFromCart(user, id));
     }
 
-    /**
-     * AUDIT #2.4: Clear entire cart.
-     * New: Synchronized with Audit Item #2.4 in your Postman collection.
-     */
     @DeleteMapping("/clear")
     public ResponseEntity<Void> clearCart(Authentication authentication) {
         User user = getUserFromAuth(authentication);
@@ -64,14 +55,14 @@ public class CartController {
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * AUDIT #1.6: Checkout cart and create order.
-     * Uses Idempotency-Key to prevent duplicate charges.
-     */
     @PostMapping("/checkout")
-    public ResponseEntity<Order> checkout(@RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey, Authentication authentication) {
+    public ResponseEntity<Order> checkout(
+            @RequestParam Long vehicleId,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+            Authentication authentication
+    ) {
         User user = getUserFromAuth(authentication);
-        return ResponseEntity.ok(orderService.checkoutCart(user, idempotencyKey));
+        return ResponseEntity.ok(orderService.checkoutCart(user, vehicleId, idempotencyKey));
     }
 
     private User getUserFromAuth(Authentication authentication) {

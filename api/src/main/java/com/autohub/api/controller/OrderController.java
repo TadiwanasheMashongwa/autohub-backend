@@ -25,9 +25,13 @@ public class OrderController {
     }
 
     @PostMapping("/checkout")
-    public ResponseEntity<Order> checkout(@RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey, Authentication authentication) {
+    public ResponseEntity<Order> checkout(
+            @RequestParam Long vehicleId,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+            Authentication authentication
+    ) {
         User user = getUserFromAuth(authentication);
-        return ResponseEntity.ok(orderService.checkoutCart(user, idempotencyKey));
+        return ResponseEntity.ok(orderService.checkoutCart(user, vehicleId, idempotencyKey));
     }
 
     @GetMapping("/my-orders")
@@ -41,36 +45,16 @@ public class OrderController {
         return ResponseEntity.ok(orderService.getOrderByIdSecurely(id, authentication.getName()));
     }
 
-    @GetMapping("/all")
-    @PreAuthorize("hasAnyRole('ADMIN', 'CLERK')")
-    public ResponseEntity<List<Order>> getAllOrders() {
-        return ResponseEntity.ok(orderService.getAllOrders());
-    }
-
     @PostMapping("/{id}/confirm-receipt")
     public ResponseEntity<Order> confirmReceipt(@PathVariable Long id, Authentication authentication) {
-        // Validation: Ensure the user owns this order
         Order order = orderService.getOrderByIdSecurely(id, authentication.getName());
 
-        if (order.getStatus() != OrderStatus.SHIPPED && order.getStatus() != OrderStatus.IN_TRANSIT) {
-            throw new RuntimeException("Order must be SHIPPED or IN_TRANSIT before you can confirm receipt.");
+        if (order.getStatus() != OrderStatus.SHIPPED &&
+                order.getStatus() != OrderStatus.IN_TRANSIT) {
+            throw new RuntimeException("Order must be SHIPPED or IN_TRANSIT before confirmation.");
         }
 
-        // Final transition to COMPLETED/DELIVERED
         return ResponseEntity.ok(orderService.updateStatus(id, OrderStatus.COMPLETED));
-    }
-
-    @PostMapping("/cancel/{id}")
-    public ResponseEntity<Order> cancelOrder(@PathVariable Long id, Authentication authentication) {
-        // Validation: Verify ownership via secure lookup
-        Order order = orderService.getOrderByIdSecurely(id, authentication.getName());
-        return ResponseEntity.ok(orderService.cancelOrder(order.getId()));
-    }
-
-    @PatchMapping("/{id}/status")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Order> updateOrderStatus(@PathVariable Long id, @RequestParam OrderStatus status) {
-        return ResponseEntity.ok(orderService.updateStatus(id, status));
     }
 
     private User getUserFromAuth(Authentication authentication) {
