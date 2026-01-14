@@ -7,9 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 public class OrderService {
@@ -95,7 +93,7 @@ public class OrderService {
 
         Order savedOrder = orderRepository.save(order);
 
-        // 🔒 Inventory is RESERVED here (not deducted)
+        // 🔒 Inventory reserved (NOT deducted)
         inventoryService.reserveInventory(savedOrder);
 
         cart.getItems().clear();
@@ -116,5 +114,63 @@ public class OrderService {
         }
 
         return savedOrder;
+    }
+
+    /**
+     * Used by AdminController dashboard
+     */
+    public BigDecimal calculateTotalRevenue() {
+        return orderRepository.findAll().stream()
+                .filter(o -> o.getStatus() == OrderStatus.PAID || o.getStatus() == OrderStatus.COMPLETED)
+                .map(Order::getTotalAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    public long getTotalOrderCount() {
+        return orderRepository.count();
+    }
+
+    /**
+     * STEP 5.x — Refund processing
+     */
+    @Transactional
+    public Order processRefund(Long orderId, BigDecimal amount, boolean restock) {
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new RuntimeException("Refund amount must be positive");
+        }
+
+        order.setRefundedAmount(
+                order.getRefundedAmount().add(amount)
+        );
+
+        if (restock) {
+            inventoryService.releaseReservations(order);
+        }
+
+        order.setStatus(OrderStatus.REFUNDED);
+
+        return orderRepository.save(order);
+    }
+
+    /**
+     * Packing slip / manifest
+     */
+    public Map<String, Object> getOrderManifest(Long orderId) {
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        Map<String, Object> manifest = new HashMap<>();
+        manifest.put("orderId", order.getId());
+        manifest.put("customer", order.getUser().getEmail());
+        manifest.put("items", order.getItems());
+        manifest.put("courier", order.getCourierName());
+        manifest.put("trackingNumber", order.getTrackingNumber());
+
+        return manifest;
     }
 }

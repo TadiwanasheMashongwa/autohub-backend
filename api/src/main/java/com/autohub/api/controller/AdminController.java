@@ -6,9 +6,7 @@ import com.autohub.api.model.Order;
 import com.autohub.api.model.Part;
 import com.autohub.api.model.User;
 import com.autohub.api.repository.UserRepository;
-import com.autohub.api.service.OrderService;
-import com.autohub.api.service.PartService;
-import com.autohub.api.service.WarehouseService;
+import com.autohub.api.service.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -30,26 +28,26 @@ public class AdminController {
     private final OrderService orderService;
     private final PartService partService;
     private final WarehouseService warehouseService;
+    private final LogisticsService logisticsService;
     private final UserRepository userRepository;
     private final AuthenticationService authenticationService;
 
     public AdminController(OrderService orderService,
                            PartService partService,
                            WarehouseService warehouseService,
+                           LogisticsService logisticsService,
                            UserRepository userRepository,
                            AuthenticationService authenticationService) {
         this.orderService = orderService;
         this.partService = partService;
         this.warehouseService = warehouseService;
+        this.logisticsService = logisticsService;
         this.userRepository = userRepository;
         this.authenticationService = authenticationService;
     }
 
-    // --- WAREHOUSE & LOGISTICS ---
+    // --- WAREHOUSE ---
 
-    /**
-     * ENDPOINT #44: Warehouse Picking Verification.
-     */
     @PostMapping("/orders/{orderId}/pick")
     public ResponseEntity<Order> verifyAndPick(
             @PathVariable Long orderId,
@@ -60,9 +58,8 @@ public class AdminController {
         );
     }
 
-    /**
-     * ENDPOINT #45: Logistics Processing.
-     */
+    // --- LOGISTICS ---
+
     @PostMapping("/orders/{orderId}/ship")
     public ResponseEntity<Order> shipOrder(
             @PathVariable Long orderId,
@@ -70,29 +67,19 @@ public class AdminController {
             @RequestParam String trackingNumber) {
 
         return ResponseEntity.ok(
-                orderService.shipOrder(orderId, courierName, trackingNumber)
+                logisticsService.shipOrder(orderId, courierName, trackingNumber)
         );
     }
 
-    /**
-     * ENDPOINT #46: Transition order to IN_TRANSIT.
-     */
     @PatchMapping("/orders/{orderId}/transit")
     public ResponseEntity<Order> setInTransit(@PathVariable Long orderId) {
-        return ResponseEntity.ok(orderService.transitOrder(orderId));
+        return ResponseEntity.ok(
+                logisticsService.markInTransit(orderId)
+        );
     }
 
-    /**
-     * ENDPOINT #50: Packing Slip Generation.
-     */
-    @GetMapping("/orders/{orderId}/manifest")
-    public ResponseEntity<Map<String, Object>> getManifest(@PathVariable Long orderId) {
-        return ResponseEntity.ok(orderService.getOrderManifest(orderId));
-    }
+    // --- INVENTORY ---
 
-    /**
-     * ENDPOINT #24: Quick-Scan restock.
-     */
     @PatchMapping("/inventory/restock")
     public ResponseEntity<Part> restock(@RequestParam String barcode,
                                         @RequestParam Integer quantity) {
