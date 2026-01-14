@@ -7,11 +7,13 @@ import com.autohub.api.repository.UserRepository;
 import com.autohub.api.service.CartService;
 import com.autohub.api.service.OrderService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/cart")
+@PreAuthorize("hasRole('CUSTOMER')")
 public class CartController {
 
     private final CartService cartService;

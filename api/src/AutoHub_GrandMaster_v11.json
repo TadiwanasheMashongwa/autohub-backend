@@ -1,0 +1,658 @@
+{
+  "info": {
+    "_postman_id": "autohub-source-truth-v13",
+    "name": "AutoHub Source of Truth (v13.0)",
+    "description": "Exact mapping of all 10 Controllers provided in the source code. Includes correct DTO fields and Path Variables.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. AuthenticationController",
+      "description": "Base URL: /api/v1/auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"firstName\": \"John\",\n    \"lastName\": \"Doe\",\n    \"email\": \"john@example.com\",\n    \"password\": \"password123\",\n    \"phoneNumber\": \"555-0001\",\n    \"businessName\": \"Doe Garage\",\n    \"address\": \"123 Main St\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"john@example.com\",\n    \"password\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/auth/refresh",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"refreshToken\": \"{{jwt_token}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/auth/forgot-password",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"john@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/auth/reset-password",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"token\": \"uuid-token-here\",\n    \"newPassword\": \"NewPass123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/auth/logout"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. AdminController",
+      "description": "Base URL: /api/v1/admin",
+      "item": [
+        {
+          "name": "Create Clerk",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/admin/create-clerk",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"firstName\": \"Clerk\",\n    \"lastName\": \"Kent\",\n    \"email\": \"clerk@autohub.com\",\n    \"password\": \"clerkpass\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/stats"
+          }
+        },
+        {
+          "name": "List Customers",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/customers"
+          }
+        },
+        {
+          "name": "Warehouse: Pick Item",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/admin/orders/1/pick?barcode=BAR123"
+          }
+        },
+        {
+          "name": "Logistics: Ship Order",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/admin/orders/1/ship?courierName=DHL&trackingNumber=TRK999"
+          }
+        },
+        {
+          "name": "Logistics: Set In-Transit",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/api/v1/admin/orders/1/transit"
+          }
+        },
+        {
+          "name": "Logistics: Get Manifest",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/orders/1/manifest"
+          }
+        },
+        {
+          "name": "Inventory: Quick Restock",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/api/v1/admin/inventory/restock?barcode=BAR123&quantity=10"
+          }
+        },
+        {
+          "name": "Inventory: Manual Adjust",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/api/v1/admin/inventory/1/stock?quantity=50"
+          }
+        },
+        {
+          "name": "Finance: Refund",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/admin/orders/1/refund?amount=20.00&restock=true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. PartController",
+      "description": "Base URL: /api/v1/parts",
+      "item": [
+        {
+          "name": "List Parts (Paged)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/parts?page=0&size=10"
+          }
+        },
+        {
+          "name": "Search Parts",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/parts/search?query=brake"
+          }
+        },
+        {
+          "name": "Get By ID",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/parts/1"
+          }
+        },
+        {
+          "name": "Get By Category",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/parts/category/1"
+          }
+        },
+        {
+          "name": "Get By Vehicle",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/parts/vehicle/1"
+          }
+        },
+        {
+          "name": "Scan Barcode (Clerk)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/parts/scan/BAR123"
+          }
+        },
+        {
+          "name": "Create Part",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/parts",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Oil Filter\",\n    \"sku\": \"OF-001\",\n    \"barcode\": \"BAR123\",\n    \"oemNumber\": \"OEM-99\",\n    \"description\": \"High quality filter\",\n    \"price\": 15.00,\n    \"stockQuantity\": 100,\n    \"brand\": \"Bosch\",\n    \"condition\": \"NEW\",\n    \"binLocation\": \"A1-B2\",\n    \"weight\": 0.5,\n    \"dimensions\": \"10x10x10\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Delete Part",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/v1/parts/1"
+          }
+        },
+        {
+          "name": "Fitment: Link",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/parts/1/compatibility/1"
+          }
+        },
+        {
+          "name": "Fitment: Unlink",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/v1/parts/1/compatibility/1"
+          }
+        },
+        {
+          "name": "Admin: Low Stock",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/parts/admin/inventory/low-stock"
+          }
+        },
+        {
+          "name": "Admin: Adjust Stock (Alt)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/api/v1/parts/admin/inventory/1/stock?newQuantity=200"
+          }
+        },
+        {
+          "name": "Admin: Restock (Alt)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/api/v1/parts/admin/inventory/restock?barcode=BAR123&quantity=5"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. OrderController",
+      "description": "Base URL: /api/v1/orders",
+      "item": [
+        {
+          "name": "Checkout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/orders/checkout"
+          }
+        },
+        {
+          "name": "My Orders",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/orders/my-orders"
+          }
+        },
+        {
+          "name": "Get Order",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/orders/1"
+          }
+        },
+        {
+          "name": "Get All (Admin)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/orders/all"
+          }
+        },
+        {
+          "name": "Confirm Receipt",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/orders/1/confirm-receipt"
+          }
+        },
+        {
+          "name": "Cancel Order",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/orders/cancel/1"
+          }
+        },
+        {
+          "name": "Update Status (Admin)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/api/v1/orders/1/status?status=COMPLETED"
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. CartController",
+      "description": "Base URL: /api/v1/cart",
+      "item": [
+        {
+          "name": "Get Cart",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/cart"
+          }
+        },
+        {
+          "name": "Add Item",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/cart/add?partId=1&quantity=1"
+          }
+        },
+        {
+          "name": "Remove Item",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/v1/cart/item/1"
+          }
+        },
+        {
+          "name": "Clear Cart",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/v1/cart/clear"
+          }
+        },
+        {
+          "name": "Checkout (Cart Proxy)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/cart/checkout"
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. VehicleController",
+      "description": "Base URL: /api/v1/vehicles",
+      "item": [
+        {
+          "name": "List All",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/vehicles"
+          }
+        },
+        {
+          "name": "Get By ID",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/vehicles/1"
+          }
+        },
+        {
+          "name": "Get Makes",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/vehicles/makes"
+          }
+        },
+        {
+          "name": "Get Models (by Make)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/vehicles/models?make=Toyota"
+          }
+        },
+        {
+          "name": "Get Years (by Make & Model)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/vehicles/years?make=Toyota&model=Hilux"
+          }
+        },
+        {
+          "name": "Create Vehicle",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/vehicles",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"make\": \"Toyota\",\n    \"model\": \"Hilux\",\n    \"yearRange\": \"2015-2022\",\n    \"engineCode\": \"1KD-FTV\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Update Vehicle",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/api/v1/vehicles/1",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"make\": \"Toyota\",\n    \"model\": \"Hilux\",\n    \"yearRange\": \"2015-2023\",\n    \"engineCode\": \"1KD-FTV\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Delete Vehicle",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/v1/vehicles/1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. CategoryController",
+      "description": "Base URL: /api/v1/categories",
+      "item": [
+        {
+          "name": "List All",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/categories"
+          }
+        },
+        {
+          "name": "Get By ID",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/categories/1"
+          }
+        },
+        {
+          "name": "Create Category",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/categories",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Engine Parts\",\n    \"description\": \"Internal engine components\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Update Category",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/api/v1/categories/1",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Engine Components\",\n    \"description\": \"Updated description\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Delete Category",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/v1/categories/1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. ReviewController",
+      "description": "Base URL: /api/v1/reviews",
+      "item": [
+        {
+          "name": "Add Review",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/reviews/add",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"partId\": 1,\n    \"rating\": 4.5,\n    \"comment\": \"Great fit!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Get Reviews By Part",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/reviews/part/1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. PaymentController",
+      "description": "Base URL: /api/v1/payments",
+      "item": [
+        {
+          "name": "Initiate Payment",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/payments/initiate/1"
+          }
+        },
+        {
+          "name": "Confirm Payment (UI)",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/payments/confirm",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"orderId\": \"1\",\n    \"paymentId\": \"PAY-123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Gateway Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Gateway-Token",
+                "value": "secret-signature"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/payments/webhook",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"paymentId\": \"PAY-123\",\n    \"orderId\": \"1\",\n    \"status\": \"PAID\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. HealthController",
+      "description": "Base URL: /api/v1/health",
+      "item": [
+        {
+          "name": "Check Status",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/health"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "jwt_token",
+      "value": ""
+    },
+    {
+      "key": "idempotency_key",
+      "value": "uuid-test-key-1"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
+    ]
+  }
+}

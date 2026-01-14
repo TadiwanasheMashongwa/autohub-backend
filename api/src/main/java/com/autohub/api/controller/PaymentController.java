@@ -5,6 +5,7 @@ import com.autohub.api.service.OrderService;
 import com.autohub.api.service.PaymentService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -22,6 +23,7 @@ public class PaymentController {
     }
 
     @PostMapping("/initiate/{orderId}")
+    @PreAuthorize("hasRole('CUSTOMER')") // SECURED
     public ResponseEntity<Map<String, String>> initiatePayment(@PathVariable Long orderId) {
         return ResponseEntity.ok(paymentService.initiatePayment(orderId));
     }
@@ -59,6 +61,7 @@ public class PaymentController {
      * Standard user-facing confirmation (should only be used for UI redirection).
      */
     @PostMapping("/confirm")
+    @PreAuthorize("hasRole('CUSTOMER')") // SECURED
     public ResponseEntity<Order> confirmPayment(@RequestBody Map<String, String> request) {
         Long orderId = Long.parseLong(request.get("orderId"));
         String paymentId = request.get("paymentId");

@@ -6,6 +6,7 @@ import com.autohub.api.repository.ReviewRepository;
 import com.autohub.api.repository.UserRepository;
 import com.autohub.api.service.ReviewService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -32,6 +33,7 @@ public class ReviewController {
      * and automatically update the Part's average rating.
      */
     @PostMapping("/add")
+    @PreAuthorize("hasRole('CUSTOMER')") // SECURED: Admins should not review products
     public ResponseEntity<Review> addReview(@RequestBody Map<String, Object> payload, Authentication authentication) {
         User user = getUserFromAuth(authentication);
 
