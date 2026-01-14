@@ -20,7 +20,11 @@ public class CartController {
     private final OrderService orderService;
     private final UserRepository userRepository;
 
-    public CartController(CartService cartService, OrderService orderService, UserRepository userRepository) {
+    public CartController(
+            CartService cartService,
+            OrderService orderService,
+            UserRepository userRepository
+    ) {
         this.cartService = cartService;
         this.orderService = orderService;
         this.userRepository = userRepository;
@@ -43,7 +47,10 @@ public class CartController {
     }
 
     @DeleteMapping("/item/{id}")
-    public ResponseEntity<Cart> removeItem(@PathVariable Long id, Authentication authentication) {
+    public ResponseEntity<Cart> removeItem(
+            @PathVariable Long id,
+            Authentication authentication
+    ) {
         User user = getUserFromAuth(authentication);
         return ResponseEntity.ok(cartService.removeItemFromCart(user, id));
     }
@@ -62,11 +69,14 @@ public class CartController {
             Authentication authentication
     ) {
         User user = getUserFromAuth(authentication);
-        return ResponseEntity.ok(orderService.checkoutCart(user, vehicleId, idempotencyKey));
+        return ResponseEntity.ok(
+                orderService.checkoutCart(user, vehicleId, idempotencyKey)
+        );
     }
 
     private User getUserFromAuth(Authentication authentication) {
         return userRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new RuntimeException("User not found with email: " + authentication.getName()));
+                .orElseThrow(() ->
+                        new RuntimeException("User not found with email: " + authentication.getName()));
     }
 }

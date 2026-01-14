@@ -19,14 +19,18 @@ public class CartService {
     private final CartItemRepository cartItemRepository;
     private final PartRepository partRepository;
 
-    public CartService(CartRepository cartRepository, CartItemRepository cartItemRepository, PartRepository partRepository) {
+    public CartService(
+            CartRepository cartRepository,
+            CartItemRepository cartItemRepository,
+            PartRepository partRepository
+    ) {
         this.cartRepository = cartRepository;
         this.cartItemRepository = cartItemRepository;
         this.partRepository = partRepository;
     }
 
     /**
-     * AUDIT #2.1: Retrieve the user's cart or create a new one.
+     * Retrieve the user's cart or create one if it doesn't exist.
      */
     public Cart getCart(User user) {
         return cartRepository.findByUser(user)
@@ -34,19 +38,20 @@ public class CartService {
     }
 
     /**
-     * AUDIT #2.2: Add item to cart with stock validation.
+     * Add or update an item in the cart.
+     * IMPORTANT: Cart expresses intent ONLY.
+     * No stock or availability enforcement happens here.
      */
     @Transactional
     public Cart addItemToCart(User user, Long partId, Integer quantity) {
+        if (quantity == null || quantity <= 0) {
+            throw new RuntimeException("Quantity must be greater than zero.");
+        }
+
         Cart cart = getCart(user);
+
         Part part = partRepository.findById(partId)
                 .orElseThrow(() -> new RuntimeException("Part not found with ID: " + partId));
-
-        // NEW: Phase 3 Stock Validation
-        // Ensures Mike doesn't oversell parts that aren't in the warehouse.
-        if (part.getStockQuantity() < quantity) {
-            throw new RuntimeException("Insufficient stock. Only " + part.getStockQuantity() + " units available.");
-        }
 
         Optional<CartItem> existingItem = cart.getItems().stream()
                 .filter(item -> item.getPart().getId().equals(partId))
@@ -54,13 +59,7 @@ public class CartService {
 
         if (existingItem.isPresent()) {
             CartItem item = existingItem.get();
-            int newQuantity = item.getQuantity() + quantity;
-
-            // Re-validate total quantity against stock
-            if (part.getStockQuantity() < newQuantity) {
-                throw new RuntimeException("Cannot add more. Total in cart would exceed stock levels.");
-            }
-            item.setQuantity(newQuantity);
+            item.setQuantity(item.getQuantity() + quantity);
         } else {
             CartItem newItem = new CartItem();
             newItem.setCart(cart);
@@ -73,7 +72,7 @@ public class CartService {
     }
 
     /**
-     * AUDIT #2.3: Remove specific item.
+     * Remove a specific item from the cart.
      */
     @Transactional
     public Cart removeItemFromCart(User user, Long cartItemId) {
@@ -83,7 +82,7 @@ public class CartService {
     }
 
     /**
-     * AUDIT #2.4: Clear cart entirely.
+     * Clear the cart entirely.
      */
     @Transactional
     public void clearCart(User user) {
