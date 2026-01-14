@@ -9,7 +9,6 @@ import com.autohub.api.repository.UserRepository;
 import com.autohub.api.service.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -26,6 +25,7 @@ public class AdminController {
     private final PartService partService;
     private final WarehouseService warehouseService;
     private final LogisticsService logisticsService;
+    private final OrderLifecycleService lifecycleService;
     private final UserRepository userRepository;
     private final AuthenticationService authenticationService;
 
@@ -33,47 +33,52 @@ public class AdminController {
                            PartService partService,
                            WarehouseService warehouseService,
                            LogisticsService logisticsService,
+                           OrderLifecycleService lifecycleService,
                            UserRepository userRepository,
                            AuthenticationService authenticationService) {
         this.orderService = orderService;
         this.partService = partService;
         this.warehouseService = warehouseService;
         this.logisticsService = logisticsService;
+        this.lifecycleService = lifecycleService;
         this.userRepository = userRepository;
         this.authenticationService = authenticationService;
     }
 
-    // -------- WAREHOUSE --------
+    /* -------- WAREHOUSE -------- */
 
     @PostMapping("/orders/{orderId}/pick")
-    public ResponseEntity<Order> verifyAndPick(
+    public ResponseEntity<Order> pick(
             @PathVariable Long orderId,
             @RequestParam String barcode) {
+
         return ResponseEntity.ok(
                 warehouseService.verifyAndPickItem(orderId, barcode)
         );
     }
 
-    // -------- LOGISTICS --------
+    /* -------- SHIPPING -------- */
 
     @PostMapping("/orders/{orderId}/ship")
-    public ResponseEntity<Order> shipOrder(
+    public ResponseEntity<Order> ship(
             @PathVariable Long orderId,
             @RequestParam String courierName,
             @RequestParam String trackingNumber) {
+
+        logisticsService.attachShippingDetails(orderId, courierName, trackingNumber);
         return ResponseEntity.ok(
-                logisticsService.shipOrder(orderId, courierName, trackingNumber)
+                lifecycleService.markShipped(orderId, courierName, trackingNumber)
         );
     }
 
     @PatchMapping("/orders/{orderId}/transit")
-    public ResponseEntity<Order> setInTransit(@PathVariable Long orderId) {
+    public ResponseEntity<Order> transit(@PathVariable Long orderId) {
         return ResponseEntity.ok(
-                logisticsService.markInTransit(orderId)
+                lifecycleService.markInTransit(orderId)
         );
     }
 
-    // -------- INVENTORY --------
+    /* -------- INVENTORY -------- */
 
     @PatchMapping("/inventory/restock")
     public ResponseEntity<Part> restock(@RequestParam String barcode,
@@ -83,7 +88,7 @@ public class AdminController {
         );
     }
 
-    // -------- ADMIN --------
+    /* -------- ADMIN -------- */
 
     @PostMapping("/create-clerk")
     @PreAuthorize("hasRole('ADMIN')")
@@ -97,7 +102,7 @@ public class AdminController {
 
     @GetMapping("/stats")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Map<String, Object>> getDashboardStats() {
+    public ResponseEntity<Map<String, Object>> stats() {
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalRevenue", orderService.calculateTotalRevenue());
         stats.put("totalOrders", orderService.getTotalOrderCount());
@@ -117,24 +122,18 @@ public class AdminController {
 
     @GetMapping("/customers")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<User>> getAllCustomers() {
+    public ResponseEntity<List<User>> customers() {
         return ResponseEntity.ok(userRepository.findAllCustomers());
     }
 
     @PostMapping("/orders/{orderId}/refund")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Order> issueRefund(
+    public ResponseEntity<Order> refund(
             @PathVariable Long orderId,
             @RequestParam BigDecimal amount,
             @RequestParam boolean restock) {
         return ResponseEntity.ok(
                 orderService.processRefund(orderId, amount, restock)
         );
-    }
-
-    private User getUserFromAuth(Authentication authentication) {
-        return userRepository.findByEmail(authentication.getName())
-                .orElseThrow(() ->
-                        new RuntimeException("Identity not found for: " + authentication.getName()));
     }
 }

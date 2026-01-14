@@ -32,7 +32,7 @@ public class OrderLifecycleService {
         order.setPaymentStatus("PAID");
         order.setStatus(OrderStatus.PAID);
 
-        // Inventory deducted ONCE here
+        // Inventory deducted EXACTLY ONCE here
         inventoryService.deductReservedInventory(order);
 
         Order saved = orderRepository.save(order);
@@ -40,12 +40,19 @@ public class OrderLifecycleService {
         return saved;
     }
 
-    /* ---------------- LOGISTICS ---------------- */
+    /* ---------------- SHIPPING ---------------- */
 
     @Transactional
     public Order markShipped(Long orderId, String courier, String tracking) {
         Order order = get(orderId);
         assertStatus(order, OrderStatus.PAID);
+
+        boolean allPicked = order.getItems().stream()
+                .allMatch(i -> i.getPickedQuantity().equals(i.getQuantity()));
+
+        if (!allPicked) {
+            throw new RuntimeException("Cannot ship order: not all items are fully picked");
+        }
 
         order.setCourierName(courier);
         order.setTrackingNumber(tracking);
