@@ -17,9 +17,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * COMMAND CENTER: Managed by Mike and his Warehouse Staff.
- */
 @RestController
 @RequestMapping("/api/v1/admin")
 @PreAuthorize("hasAnyRole('ADMIN', 'CLERK')")
@@ -46,26 +43,24 @@ public class AdminController {
         this.authenticationService = authenticationService;
     }
 
-    // --- WAREHOUSE ---
+    // -------- WAREHOUSE --------
 
     @PostMapping("/orders/{orderId}/pick")
     public ResponseEntity<Order> verifyAndPick(
             @PathVariable Long orderId,
             @RequestParam String barcode) {
-
         return ResponseEntity.ok(
                 warehouseService.verifyAndPickItem(orderId, barcode)
         );
     }
 
-    // --- LOGISTICS ---
+    // -------- LOGISTICS --------
 
     @PostMapping("/orders/{orderId}/ship")
     public ResponseEntity<Order> shipOrder(
             @PathVariable Long orderId,
             @RequestParam String courierName,
             @RequestParam String trackingNumber) {
-
         return ResponseEntity.ok(
                 logisticsService.shipOrder(orderId, courierName, trackingNumber)
         );
@@ -78,28 +73,26 @@ public class AdminController {
         );
     }
 
-    // --- INVENTORY ---
+    // -------- INVENTORY --------
 
     @PatchMapping("/inventory/restock")
     public ResponseEntity<Part> restock(@RequestParam String barcode,
                                         @RequestParam Integer quantity) {
-        return ResponseEntity.ok(partService.updateStockByBarcode(barcode, quantity));
+        return ResponseEntity.ok(
+                partService.updateStockByBarcode(barcode, quantity)
+        );
     }
 
-    // --- ADMIN ONLY ---
+    // -------- ADMIN --------
 
     @PostMapping("/create-clerk")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> createClerk(@RequestBody RegisterRequest request) {
-        try {
-            User clerk = authenticationService.createInternalUser(request, "ROLE_CLERK");
-            return ResponseEntity.ok(Map.of(
-                    "message", "Clerk account created successfully",
-                    "email", clerk.getEmail()
-            ));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        }
+        User clerk = authenticationService.createInternalUser(request, "ROLE_CLERK");
+        return ResponseEntity.ok(Map.of(
+                "message", "Clerk account created successfully",
+                "email", clerk.getEmail()
+        ));
     }
 
     @GetMapping("/stats")
@@ -117,7 +110,9 @@ public class AdminController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Part> adjustStock(@PathVariable Long partId,
                                             @RequestParam Integer quantity) {
-        return ResponseEntity.ok(partService.manualStockAdjustment(partId, quantity));
+        return ResponseEntity.ok(
+                partService.manualStockAdjustment(partId, quantity)
+        );
     }
 
     @GetMapping("/customers")
@@ -132,7 +127,6 @@ public class AdminController {
             @PathVariable Long orderId,
             @RequestParam BigDecimal amount,
             @RequestParam boolean restock) {
-
         return ResponseEntity.ok(
                 orderService.processRefund(orderId, amount, restock)
         );

@@ -1,7 +1,7 @@
 package com.autohub.api.controller;
 
 import com.autohub.api.model.Order;
-import com.autohub.api.service.PaymentOrchestratorService;
+import com.autohub.api.service.OrderLifecycleService;
 import com.autohub.api.service.PaymentService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,12 +15,12 @@ import java.util.Map;
 public class PaymentController {
 
     private final PaymentService paymentService;
-    private final PaymentOrchestratorService orchestrator;
+    private final OrderLifecycleService lifecycle;
 
     public PaymentController(PaymentService paymentService,
-                             PaymentOrchestratorService orchestrator) {
+                             OrderLifecycleService lifecycle) {
         this.paymentService = paymentService;
-        this.orchestrator = orchestrator;
+        this.lifecycle = lifecycle;
     }
 
     @PostMapping("/initiate/{orderId}")
@@ -38,7 +38,7 @@ public class PaymentController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Signature");
         }
 
-        orchestrator.finalizePayment(
+        lifecycle.markPaid(
                 Long.parseLong(payload.get("orderId")),
                 payload.get("paymentId")
         );
@@ -50,7 +50,7 @@ public class PaymentController {
     @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<Order> confirm(@RequestBody Map<String, String> request) {
         return ResponseEntity.ok(
-                orchestrator.finalizePayment(
+                lifecycle.markPaid(
                         Long.parseLong(request.get("orderId")),
                         request.get("paymentId")
                 )
