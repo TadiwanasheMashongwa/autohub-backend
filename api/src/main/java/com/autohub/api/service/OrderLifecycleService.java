@@ -2,6 +2,7 @@ package com.autohub.api.service;
 
 import com.autohub.api.model.Order;
 import com.autohub.api.model.OrderStatus;
+import com.autohub.api.model.User;
 import com.autohub.api.repository.OrderRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,7 +40,7 @@ public class OrderLifecycleService {
         return saved;
     }
 
-    /* ---------------- SHIPPING ---------------- */
+    /* ---------------- LOGISTICS ---------------- */
 
     @Transactional
     public Order markShipped(Long orderId, String courier, String tracking) {
@@ -50,7 +51,7 @@ public class OrderLifecycleService {
                 .allMatch(i -> i.getPickedQuantity().equals(i.getQuantity()));
 
         if (!allPicked) {
-            throw new RuntimeException("Cannot ship order: not all items are fully picked");
+            throw new RuntimeException("Cannot ship order: items not fully picked");
         }
 
         order.setCourierName(courier);
@@ -82,36 +83,30 @@ public class OrderLifecycleService {
         return saved;
     }
 
-    /* ---------------- RETURNS ---------------- */
-
     @Transactional
-    public Order requestReturn(Long orderId, String reason) {
+    public Order complete(Long orderId) {
         Order order = get(orderId);
         assertStatus(order, OrderStatus.DELIVERED);
 
-        order.setReturnReason(reason);
-        order.setStatus(OrderStatus.RETURN_REQUESTED);
+        order.setStatus(OrderStatus.COMPLETED);
         return orderRepository.save(order);
     }
 
-    @Transactional
-    public Order markReturned(Long orderId) {
-        Order order = get(orderId);
-        assertStatus(order, OrderStatus.RETURN_REQUESTED);
+    /* ---------------- REVIEWS (NEW) ---------------- */
 
-        order.setStatus(OrderStatus.RETURNED);
-        return orderRepository.save(order);
-    }
+    public void assertCanReview(User user, Long partId) {
+        boolean eligible = orderRepository.existsEligibleDeliveredOrder(
+                user.getId(),
+                partId,
+                OrderStatus.DELIVERED,
+                OrderStatus.COMPLETED
+        );
 
-    @Transactional
-    public Order refund(Long orderId) {
-        Order order = get(orderId);
-        assertStatus(order, OrderStatus.RETURNED);
-
-        inventoryService.releaseReservations(order);
-        order.setStatus(OrderStatus.REFUNDED);
-
-        return orderRepository.save(order);
+        if (!eligible) {
+            throw new RuntimeException(
+                    "Review not allowed: part not purchased or order not delivered"
+            );
+        }
     }
 
     /* ---------------- HELPERS ---------------- */

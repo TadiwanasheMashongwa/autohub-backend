@@ -4,11 +4,18 @@ import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "reviews")
+@Table(
+        name = "reviews",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = {"user_id", "part_id"})
+        }
+)
 public class Review {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -22,8 +29,8 @@ public class Review {
     @JsonBackReference
     private Part part;
 
-    // CHANGED: From Integer to Double to allow 4.5 star ratings
-    @Min(1) @Max(5)
+    @Min(1)
+    @Max(5)
     private Double rating;
 
     @Column(columnDefinition = "TEXT")
@@ -47,5 +54,4 @@ public class Review {
     public void setPart(Part part) { this.part = part; }
     public void setRating(Double rating) { this.rating = rating; }
     public void setComment(String comment) { this.comment = comment; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }
