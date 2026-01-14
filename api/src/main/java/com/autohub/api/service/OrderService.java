@@ -38,12 +38,8 @@ public class OrderService {
         this.objectMapper = objectMapper;
     }
 
-    /**
-     * STEP 5 — Checkout creates order + reserves inventory
-     */
     @Transactional
     public Order checkoutCart(User user, String idempotencyKey) {
-
         if (idempotencyKey != null) {
             Optional<IdempotencyRecord> cached = idempotencyRepository.findById(idempotencyKey);
             if (cached.isPresent()) {
@@ -92,8 +88,6 @@ public class OrderService {
         order.setTotalAmount(total);
 
         Order savedOrder = orderRepository.save(order);
-
-        // 🔒 Inventory reserved (NOT deducted)
         inventoryService.reserveInventory(savedOrder);
 
         cart.getItems().clear();
@@ -116,9 +110,6 @@ public class OrderService {
         return savedOrder;
     }
 
-    /**
-     * Used by AdminController dashboard
-     */
     public BigDecimal calculateTotalRevenue() {
         return orderRepository.findAll().stream()
                 .filter(o -> o.getStatus() == OrderStatus.PAID || o.getStatus() == OrderStatus.COMPLETED)
@@ -130,37 +121,7 @@ public class OrderService {
         return orderRepository.count();
     }
 
-    /**
-     * STEP 5.x — Refund processing
-     */
-    @Transactional
-    public Order processRefund(Long orderId, BigDecimal amount, boolean restock) {
-
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
-
-        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new RuntimeException("Refund amount must be positive");
-        }
-
-        order.setRefundedAmount(
-                order.getRefundedAmount().add(amount)
-        );
-
-        if (restock) {
-            inventoryService.releaseReservations(order);
-        }
-
-        order.setStatus(OrderStatus.REFUNDED);
-
-        return orderRepository.save(order);
-    }
-
-    /**
-     * Packing slip / manifest
-     */
     public Map<String, Object> getOrderManifest(Long orderId) {
-
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
 

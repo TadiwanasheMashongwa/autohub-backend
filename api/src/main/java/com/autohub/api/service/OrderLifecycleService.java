@@ -32,7 +32,6 @@ public class OrderLifecycleService {
         order.setPaymentStatus("PAID");
         order.setStatus(OrderStatus.PAID);
 
-        // Inventory deducted EXACTLY ONCE here
         inventoryService.deductReservedInventory(order);
 
         Order saved = orderRepository.save(order);
@@ -83,12 +82,35 @@ public class OrderLifecycleService {
         return saved;
     }
 
+    /* ---------------- RETURNS ---------------- */
+
     @Transactional
-    public Order complete(Long orderId) {
+    public Order requestReturn(Long orderId, String reason) {
         Order order = get(orderId);
         assertStatus(order, OrderStatus.DELIVERED);
 
-        order.setStatus(OrderStatus.COMPLETED);
+        order.setReturnReason(reason);
+        order.setStatus(OrderStatus.RETURN_REQUESTED);
+        return orderRepository.save(order);
+    }
+
+    @Transactional
+    public Order markReturned(Long orderId) {
+        Order order = get(orderId);
+        assertStatus(order, OrderStatus.RETURN_REQUESTED);
+
+        order.setStatus(OrderStatus.RETURNED);
+        return orderRepository.save(order);
+    }
+
+    @Transactional
+    public Order refund(Long orderId) {
+        Order order = get(orderId);
+        assertStatus(order, OrderStatus.RETURNED);
+
+        inventoryService.releaseReservations(order);
+        order.setStatus(OrderStatus.REFUNDED);
+
         return orderRepository.save(order);
     }
 

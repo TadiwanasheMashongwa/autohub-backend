@@ -65,7 +65,6 @@ public class AdminController {
             @RequestParam String courierName,
             @RequestParam String trackingNumber) {
 
-        logisticsService.attachShippingDetails(orderId, courierName, trackingNumber);
         return ResponseEntity.ok(
                 lifecycleService.markShipped(orderId, courierName, trackingNumber)
         );
@@ -78,13 +77,51 @@ public class AdminController {
         );
     }
 
+    @PatchMapping("/orders/{orderId}/delivered")
+    public ResponseEntity<Order> delivered(@PathVariable Long orderId) {
+        return ResponseEntity.ok(
+                lifecycleService.markDelivered(orderId)
+        );
+    }
+
+    /* -------- RETURNS & REFUNDS (FLOW 8.1) -------- */
+
+    @PatchMapping("/orders/{orderId}/returned")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Order> markReturned(@PathVariable Long orderId) {
+        return ResponseEntity.ok(
+                lifecycleService.markReturned(orderId)
+        );
+    }
+
+    @PostMapping("/orders/{orderId}/refund")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Order> refund(@PathVariable Long orderId) {
+        return ResponseEntity.ok(
+                lifecycleService.refund(orderId)
+        );
+    }
+
     /* -------- INVENTORY -------- */
 
     @PatchMapping("/inventory/restock")
-    public ResponseEntity<Part> restock(@RequestParam String barcode,
-                                        @RequestParam Integer quantity) {
+    public ResponseEntity<Part> restock(
+            @RequestParam String barcode,
+            @RequestParam Integer quantity) {
+
         return ResponseEntity.ok(
                 partService.updateStockByBarcode(barcode, quantity)
+        );
+    }
+
+    @PatchMapping("/inventory/{partId}/stock")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Part> adjustStock(
+            @PathVariable Long partId,
+            @RequestParam Integer quantity) {
+
+        return ResponseEntity.ok(
+                partService.manualStockAdjustment(partId, quantity)
         );
     }
 
@@ -100,6 +137,12 @@ public class AdminController {
         ));
     }
 
+    @GetMapping("/customers")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<User>> customers() {
+        return ResponseEntity.ok(userRepository.findAllCustomers());
+    }
+
     @GetMapping("/stats")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> stats() {
@@ -109,31 +152,5 @@ public class AdminController {
         stats.put("totalCustomers", userRepository.countByRoleName("ROLE_CUSTOMER"));
         stats.put("lowStockCount", partService.getLowStockParts().size());
         return ResponseEntity.ok(stats);
-    }
-
-    @PatchMapping("/inventory/{partId}/stock")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Part> adjustStock(@PathVariable Long partId,
-                                            @RequestParam Integer quantity) {
-        return ResponseEntity.ok(
-                partService.manualStockAdjustment(partId, quantity)
-        );
-    }
-
-    @GetMapping("/customers")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<User>> customers() {
-        return ResponseEntity.ok(userRepository.findAllCustomers());
-    }
-
-    @PostMapping("/orders/{orderId}/refund")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Order> refund(
-            @PathVariable Long orderId,
-            @RequestParam BigDecimal amount,
-            @RequestParam boolean restock) {
-        return ResponseEntity.ok(
-                orderService.processRefund(orderId, amount, restock)
-        );
     }
 }
