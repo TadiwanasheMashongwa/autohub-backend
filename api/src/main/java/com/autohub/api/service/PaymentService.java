@@ -22,7 +22,6 @@ public class PaymentService {
     private final TransactionRepository transactionRepository;
     private final AuditLogRepository auditLogRepository;
 
-    // FIXED: Added ":ah_default_secret" as a fallback to prevent app crash if property is missing
     @Value("${app.payment.webhook-secret:ah_default_secret}")
     private String webhookSecret;
 
@@ -38,9 +37,6 @@ public class PaymentService {
         return webhookSecret.equals(receivedSignature);
     }
 
-    /**
-     * PHASE 4: Initiate Payment Lifecycle.
-     */
     @Transactional
     public Map<String, String> initiatePayment(Long orderId) {
         Order order = orderRepository.findById(orderId)
@@ -48,22 +44,21 @@ public class PaymentService {
 
         String gatewayRef = "AH-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
 
-        Transaction transaction = new Transaction(
-                order,
-                "AutoHub-Gateway",
-                gatewayRef,
-                order.getTotalAmount(),
-                "USD",
-                "PENDING"
+        transactionRepository.save(
+                new Transaction(
+                        order,
+                        "AutoHub-Gateway",
+                        gatewayRef,
+                        order.getTotalAmount(),
+                        "USD",
+                        "PENDING"
+                )
         );
-        transactionRepository.save(transaction);
 
-        // Audit Log Sync
-        String currentUser = SecurityContextHolder.getContext().getAuthentication().getName();
         auditLogRepository.save(new AuditLog(
                 "PAYMENT_INITIATED",
-                currentUser,
-                "User initiated payment for Order #" + orderId + " Ref: " + gatewayRef
+                SecurityContextHolder.getContext().getAuthentication().getName(),
+                "Order #" + orderId + " Ref: " + gatewayRef
         ));
 
         Map<String, String> response = new HashMap<>();
@@ -71,24 +66,5 @@ public class PaymentService {
         response.put("gatewayReference", gatewayRef);
         response.put("status", "PENDING");
         return response;
-    }
-
-    /**
-     * PHASE 4: Update transaction status for audit and gateway sync.
-     */
-    @Transactional
-    public void updateTransactionStatus(String gatewayRef, String status) {
-        Transaction transaction = transactionRepository.findByGatewayReference(gatewayRef)
-                .orElseThrow(() -> new RuntimeException("Transaction not found"));
-
-        String oldStatus = transaction.getStatus();
-        transaction.setStatus(status);
-        transactionRepository.save(transaction);
-
-        auditLogRepository.save(new AuditLog(
-                "TRANSACTION_STATUS_CHANGE",
-                "SYSTEM_GATEWAY",
-                "Transaction " + gatewayRef + " changed from " + oldStatus + " to " + status
-        ));
     }
 }
