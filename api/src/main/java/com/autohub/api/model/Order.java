@@ -50,7 +50,7 @@ public class Order {
         this.status = OrderStatus.PENDING;
     }
 
-    // --- GETTERS & SETTERS (unchanged semantics) ---
+    // -------- GETTERS --------
 
     public Long getId() { return id; }
     public User getUser() { return user; }
@@ -59,7 +59,11 @@ public class Order {
     public BigDecimal getDiscountAmount() { return discountAmount; }
     public BigDecimal getRefundedAmount() { return refundedAmount; }
     public String getCouponCode() { return couponCode; }
+    public String getPaymentId() { return paymentId; }
+    public String getPaymentStatus() { return paymentStatus; }
     public List<OrderItem> getItems() { return items; }
+
+    // -------- SETTERS --------
 
     public void setUser(User user) { this.user = user; }
     public void setStatus(OrderStatus status) { this.status = status; }
@@ -67,5 +71,7 @@ public class Order {
     public void setDiscountAmount(BigDecimal discountAmount) { this.discountAmount = discountAmount; }
     public void setRefundedAmount(BigDecimal refundedAmount) { this.refundedAmount = refundedAmount; }
     public void setCouponCode(String couponCode) { this.couponCode = couponCode; }
+    public void setPaymentId(String paymentId) { this.paymentId = paymentId; }
+    public void setPaymentStatus(String paymentStatus) { this.paymentStatus = paymentStatus; }
     public void setItems(List<OrderItem> items) { this.items = items; }
 }
