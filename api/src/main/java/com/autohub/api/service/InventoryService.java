@@ -64,10 +64,6 @@ public class InventoryService {
             partRepository.save(part);
         }
     }
-
-    /**
-     * STEP 5.3 — Release inventory on failure/cancel
-     */
     @Transactional
     public void releaseReservations(Order order) {
 

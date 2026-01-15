@@ -38,14 +38,35 @@ public class InventoryReservation {
         this.quantity = quantity;
     }
 
-    // --- GETTERS ---
-    public Long getId() { return id; }
-    public Part getPart() { return part; }
-    public Order getOrder() { return order; }
-    public Integer getQuantity() { return quantity; }
-    public boolean isActive() { return active; }
-    public LocalDateTime getCreatedAt() { return createdAt; }
+    // -------- GETTERS --------
 
-    // --- SETTERS ---
-    public void setActive(boolean active) { this.active = active; }
+    public Long getId() {
+        return id;
+    }
+
+    public Part getPart() {
+        return part;
+    }
+
+    public Order getOrder() {
+        return order;
+    }
+
+    public Integer getQuantity() {
+        return quantity;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    // -------- SETTERS --------
+
+    public void setActive(boolean active) {
+        this.active = active;
+    }
 }
