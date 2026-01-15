@@ -40,7 +40,7 @@ public class OrderLifecycleService {
         return saved;
     }
 
-    /* ---------------- LOGISTICS ---------------- */
+    /* ---------------- SHIPPING ---------------- */
 
     @Transactional
     public Order markShipped(Long orderId, String courier, String tracking) {
@@ -83,16 +83,50 @@ public class OrderLifecycleService {
         return saved;
     }
 
+    /* ---------------- RETURNS (FLOW 8) ---------------- */
+
+    /**
+     * Customer requests return
+     */
     @Transactional
-    public Order complete(Long orderId) {
+    public Order requestReturn(Long orderId, String reason) {
         Order order = get(orderId);
         assertStatus(order, OrderStatus.DELIVERED);
 
-        order.setStatus(OrderStatus.COMPLETED);
+        order.setReturnReason(reason);
+        order.setStatus(OrderStatus.RETURN_REQUESTED);
         return orderRepository.save(order);
     }
 
-    /* ---------------- REVIEWS (NEW) ---------------- */
+    /**
+     * Admin marks order as physically returned
+     */
+    @Transactional
+    public Order markReturned(Long orderId) {
+        Order order = get(orderId);
+        assertStatus(order, OrderStatus.RETURN_REQUESTED);
+
+        order.setStatus(OrderStatus.RETURNED);
+        return orderRepository.save(order);
+    }
+
+    /**
+     * Admin executes refund + restock
+     */
+    @Transactional
+    public Order refund(Long orderId) {
+        Order order = get(orderId);
+        assertStatus(order, OrderStatus.RETURNED);
+
+        inventoryService.releaseReservations(order);
+
+        order.setStatus(OrderStatus.REFUNDED);
+        Order saved = orderRepository.save(order);
+        emailService.sendRefundConfirmation(saved);
+        return saved;
+    }
+
+    /* ---------------- REVIEWS ---------------- */
 
     public void assertCanReview(User user, Long partId) {
         boolean eligible = orderRepository.existsEligibleDeliveredOrder(
