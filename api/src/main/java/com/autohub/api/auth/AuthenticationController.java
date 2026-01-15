@@ -21,60 +21,42 @@ public class AuthenticationController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
-        try {
-            return ResponseEntity.ok(service.register(request));
-        } catch (Exception e) {
-            return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
-        }
+    public ResponseEntity<AuthenticationResponse> register(@Valid @RequestBody RegisterRequest request) {
+        // Let GlobalExceptionHandler handle the RuntimeException if email exists
+        return ResponseEntity.ok(service.register(request));
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> authenticate(@RequestBody RegisterRequest request) {
-        User user = userRepository.findByEmail(request.getEmail()).orElse(null);
-        if (user == null || !service.isValidCredentials(request)) {
-            return ResponseEntity.status(401).body("Invalid credentials");
-        }
+    public ResponseEntity<AuthenticationResponse> authenticate(@RequestBody RegisterRequest request) {
+        // We let AuthenticationManager/AuthenticationService throw exceptions if credentials fail
         return ResponseEntity.ok(service.authenticate(request));
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<?> refresh(@RequestBody Map<String, String> request) {
+    public ResponseEntity<AuthenticationResponse> refresh(@RequestBody Map<String, String> request) {
         String refreshToken = request.get("refreshToken");
-        try {
-            return ResponseEntity.ok(service.refreshToken(refreshToken));
-        } catch (Exception e) {
-            return ResponseEntity.status(403).body("Session expired. Please log in again.");
-        }
+        return ResponseEntity.ok(service.refreshToken(refreshToken));
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<?> logout() {
+    public ResponseEntity<Map<String, String>> logout() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         service.logout(email);
         return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
     }
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> request) {
+    public ResponseEntity<Map<String, String>> forgotPassword(@RequestBody Map<String, String> request) {
         String email = request.get("email");
-        try {
-            service.initiatePasswordReset(email);
-            return ResponseEntity.ok(Map.of("message", "Reset link sent. Check your inbox."));
-        } catch (Exception e) {
-            return ResponseEntity.ok(Map.of("message", "If an account exists, a reset link has been sent."));
-        }
+        service.initiatePasswordReset(email);
+        return ResponseEntity.ok(Map.of("message", "If an account exists, a reset link has been sent."));
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> request) {
+    public ResponseEntity<Map<String, String>> resetPassword(@RequestBody Map<String, String> request) {
         String token = request.get("token");
         String newPassword = request.get("newPassword");
-        try {
-            service.completePasswordReset(token, newPassword);
-            return ResponseEntity.ok(Map.of("message", "Password updated successfully"));
-        } catch (Exception e) {
-            return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
-        }
+        service.completePasswordReset(token, newPassword);
+        return ResponseEntity.ok(Map.of("message", "Password updated successfully. All other sessions have been logged out."));
     }
 }
