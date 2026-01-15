@@ -62,6 +62,9 @@ public class Order {
     public String getPaymentId() { return paymentId; }
     public String getPaymentStatus() { return paymentStatus; }
     public List<OrderItem> getItems() { return items; }
+    public String getCourierName() { return courierName; }
+    public String getTrackingNumber() { return trackingNumber; }
+
 
     // -------- SETTERS --------
 
@@ -74,4 +77,12 @@ public class Order {
     public void setPaymentId(String paymentId) { this.paymentId = paymentId; }
     public void setPaymentStatus(String paymentStatus) { this.paymentStatus = paymentStatus; }
     public void setItems(List<OrderItem> items) { this.items = items; }
+    public void setCourierName(String courierName) {
+        this.courierName = courierName;
+    }
+
+    public void setTrackingNumber(String trackingNumber) {
+        this.trackingNumber = trackingNumber;
+    }
+
 }
