@@ -65,8 +65,29 @@ public class Order {
     public String getCourierName() { return courierName; }
     public String getTrackingNumber() { return trackingNumber; }
 
+    public String getReturnReason() {
+        return returnReason;
+    }
+
+    public LocalDateTime getDeliveryDate() {
+        return deliveryDate;
+    }
+    public LocalDateTime getShippedDate() {
+        return shippedDate;
+    }
+
 
     // -------- SETTERS --------
+
+    public void setReturnReason(String returnReason) {
+        this.returnReason = returnReason;
+    }
+    public void setShippedDate(LocalDateTime shippedDate) {
+        this.shippedDate = shippedDate;
+    }
+    public void setDeliveryDate(LocalDateTime deliveryDate) {
+        this.deliveryDate = deliveryDate;
+    }
 
     public void setUser(User user) { this.user = user; }
     public void setStatus(OrderStatus status) { this.status = status; }
