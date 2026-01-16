@@ -20,6 +20,7 @@ public class AuthenticationController {
         this.userRepository = userRepository;
     }
 
+
     @PostMapping("/register")
     public ResponseEntity<AuthenticationResponse> register(@Valid @RequestBody RegisterRequest request) {
         // Let GlobalExceptionHandler handle the RuntimeException if email exists
