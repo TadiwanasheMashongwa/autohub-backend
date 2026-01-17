@@ -1,31 +1,31 @@
-package com.autohub.api.auth;
+    package com.autohub.api.auth;
 
-/**
- * Data Transfer Object for authentication responses.
- * Supported by Phase 2 Step 3 Refresh Token rotation logic.
- */
-public class AuthenticationResponse {
-    private String accessToken;
-    private String refreshToken;
-    private String role;
-    private String username; // Returns email as the identity principal
+    /**
+     * Data Transfer Object for authentication responses.
+     * Supported by Phase 2 Step 3 Refresh Token rotation logic.
+     */
+    public class AuthenticationResponse {
+        private String accessToken;
+        private String refreshToken;
+        private String role;
+        private String username; // Returns email as the identity principal
 
-    public AuthenticationResponse() {}
+        public AuthenticationResponse() {}
 
-    public AuthenticationResponse(String accessToken, String refreshToken, String role, String username) {
-        this.accessToken = accessToken;
-        this.refreshToken = refreshToken;
-        this.role = role;
-        this.username = username;
+        public AuthenticationResponse(String accessToken, String refreshToken, String role, String username) {
+            this.accessToken = accessToken;
+            this.refreshToken = refreshToken;
+            this.role = role;
+            this.username = username;
+        }
+
+        public String getAccessToken() { return accessToken; }
+        public String getRefreshToken() { return refreshToken; }
+        public String getRole() { return role; }
+        public String getUsername() { return username; }
+
+        public void setAccessToken(String accessToken) { this.accessToken = accessToken; }
+        public void setRefreshToken(String refreshToken) { this.refreshToken = refreshToken; }
+        public void setRole(String role) { this.role = role; }
+        public void setUsername(String username) { this.username = username; }
     }
-
-    public String getAccessToken() { return accessToken; }
-    public String getRefreshToken() { return refreshToken; }
-    public String getRole() { return role; }
-    public String getUsername() { return username; }
-
-    public void setAccessToken(String accessToken) { this.accessToken = accessToken; }
-    public void setRefreshToken(String refreshToken) { this.refreshToken = refreshToken; }
-    public void setRole(String role) { this.role = role; }
-    public void setUsername(String username) { this.username = username; }
-}
