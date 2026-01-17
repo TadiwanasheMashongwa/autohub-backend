@@ -6,6 +6,7 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.stream.Collectors;
@@ -21,7 +22,7 @@ public class EmailService {
     }
 
     /* ---------------- ORDER CREATION ---------------- */
-
+    @Async
     public void sendOrderReceivedEmail(Order order) {
         String subject = "Order Received #" + order.getId();
         String body =
@@ -35,7 +36,7 @@ public class EmailService {
     }
 
     /* ---------------- PAYMENT ---------------- */
-
+    @Async
     public void sendOrderConfirmation(Order order) {
         String items = order.getItems().stream()
                 .map(i -> i.getQuantity() + " x " + i.getPart().getName())
@@ -54,7 +55,7 @@ public class EmailService {
     }
 
     /* ---------------- SHIPPING ---------------- */
-
+    @Async
     public void sendShippingNotification(Order order) {
         String subject = "Order Shipped #" + order.getId();
         String body =
@@ -68,7 +69,7 @@ public class EmailService {
     }
 
     /* ---------------- DELIVERY ---------------- */
-
+    @Async
     public void sendDeliveryConfirmation(Order order) {
         String subject = "Order Delivered #" + order.getId();
         String body =
@@ -80,7 +81,7 @@ public class EmailService {
     }
 
     /* ---------------- REFUNDS ---------------- */
-
+    @Async
     public void sendRefundConfirmation(Order order) {
         String subject = "Refund Processed for Order #" + order.getId();
         String body =
@@ -92,7 +93,7 @@ public class EmailService {
     }
 
     /* ---------------- AUTH ---------------- */
-
+    @Async
     public void sendPasswordResetEmail(String email, String token) {
         String subject = "Password Reset Request";
         String body =
