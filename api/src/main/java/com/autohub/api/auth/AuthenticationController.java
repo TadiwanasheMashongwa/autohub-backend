@@ -26,6 +26,13 @@ public class AuthenticationController {
         // Let GlobalExceptionHandler handle the RuntimeException if email exists
         return ResponseEntity.ok(service.register(request));
     }
+   /* @PostMapping("/verify-mfa")
+    public ResponseEntity<AuthenticationResponse> verifyMfa(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        String code = request.get("code");
+        String tempToken = request.get("tempToken");
+        return ResponseEntity.ok(service.verifyMfa(email, code, tempToken));
+    }*/
 
     @PostMapping("/login")
     public ResponseEntity<AuthenticationResponse> authenticate(@RequestBody RegisterRequest request) {

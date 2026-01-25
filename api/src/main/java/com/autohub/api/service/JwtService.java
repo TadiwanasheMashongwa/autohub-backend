@@ -4,6 +4,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import javax.crypto.SecretKey;
@@ -26,14 +27,21 @@ public class JwtService {
         return claimsResolver.apply(claims);
     }
 
-    // NEW: Access Token (Short-lived: 15 Minutes)
+    // --- MODIFIED: Now extracts Role and adds it to the token ---
     public String generateToken(UserDetails userDetails) {
-        return Jwts.builder()
-                .subject(userDetails.getUsername())
-                .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(new Date(System.currentTimeMillis() + 1000 * 60 * 15))
-                .signWith(getSignInKey())
-                .compact();
+        Map<String, Object> claims = new HashMap<>();
+
+        // 1. Get the role from the UserDetails (User.java)
+        // We assume the user has one primary role.
+        String role = userDetails.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .findFirst()
+                .orElse("USER"); // Default fallback
+
+        // 2. Add it to the map
+        claims.put("role", role);
+
+        return createToken(claims, userDetails);
     }
 
     // NEW: Refresh Token (Long-lived: 7 Days)
@@ -42,6 +50,17 @@ public class JwtService {
                 .subject(userDetails.getUsername())
                 .issuedAt(new Date(System.currentTimeMillis()))
                 .expiration(new Date(System.currentTimeMillis() + 1000L * 60 * 60 * 24 * 7))
+                .signWith(getSignInKey())
+                .compact();
+    }
+
+    // --- HELPER: Handles the actual building ---
+    private String createToken(Map<String, Object> extraClaims, UserDetails userDetails) {
+        return Jwts.builder()
+                .claims(extraClaims) // <--- THIS WAS MISSING BEFORE
+                .subject(userDetails.getUsername())
+                .issuedAt(new Date(System.currentTimeMillis()))
+                .expiration(new Date(System.currentTimeMillis() + 1000 * 60 * 15)) // 15 minutes
                 .signWith(getSignInKey())
                 .compact();
     }
