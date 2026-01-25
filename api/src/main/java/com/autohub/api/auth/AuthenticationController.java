@@ -32,16 +32,16 @@ public class AuthenticationController {
 
     /**
      * Silicon Valley Grade: Identity Validation
-     * Returns the currently authenticated user's profile based on the JWT.
+     * Endpoint for the frontend to verify the session and fetch the current role.
      */
     @GetMapping("/me")
     public ResponseEntity<AuthenticationResponse> getProfile() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new RuntimeException("Session identity not found"));
 
         return ResponseEntity.ok(new AuthenticationResponse(
-                null, // Access token not needed for validation
+                null, // Access token is already in headers
                 null, // Refresh token not needed for validation
                 user.getRole().getName(),
                 user.getEmail()
