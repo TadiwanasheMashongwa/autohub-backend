@@ -32,7 +32,6 @@ public class JwtService {
         Map<String, Object> claims = new HashMap<>();
 
         // 1. Get the role from the UserDetails (User.java)
-        // We assume the user has one primary role.
         String role = userDetails.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .findFirst()
@@ -44,7 +43,6 @@ public class JwtService {
         return createToken(claims, userDetails);
     }
 
-    // NEW: Refresh Token (Long-lived: 7 Days)
     public String generateRefreshToken(UserDetails userDetails) {
         return Jwts.builder()
                 .subject(userDetails.getUsername())
@@ -54,7 +52,6 @@ public class JwtService {
                 .compact();
     }
 
-    // --- HELPER: Handles the actual building ---
     private String createToken(Map<String, Object> extraClaims, UserDetails userDetails) {
         return Jwts.builder()
                 .claims(extraClaims) // <--- THIS WAS MISSING BEFORE
