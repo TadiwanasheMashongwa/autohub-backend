@@ -20,24 +20,32 @@ public class AuthenticationController {
         this.userRepository = userRepository;
     }
 
-
     @PostMapping("/register")
     public ResponseEntity<AuthenticationResponse> register(@Valid @RequestBody RegisterRequest request) {
-        // Let GlobalExceptionHandler handle the RuntimeException if email exists
         return ResponseEntity.ok(service.register(request));
     }
-   /* @PostMapping("/verify-mfa")
-    public ResponseEntity<AuthenticationResponse> verifyMfa(@RequestBody Map<String, String> request) {
-        String email = request.get("email");
-        String code = request.get("code");
-        String tempToken = request.get("tempToken");
-        return ResponseEntity.ok(service.verifyMfa(email, code, tempToken));
-    }*/
 
     @PostMapping("/login")
     public ResponseEntity<AuthenticationResponse> authenticate(@RequestBody RegisterRequest request) {
-        // We let AuthenticationManager/AuthenticationService throw exceptions if credentials fail
         return ResponseEntity.ok(service.authenticate(request));
+    }
+
+    /**
+     * Silicon Valley Grade: Identity Validation
+     * Returns the currently authenticated user's profile based on the JWT.
+     */
+    @GetMapping("/me")
+    public ResponseEntity<AuthenticationResponse> getProfile() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        return ResponseEntity.ok(new AuthenticationResponse(
+                null, // Access token not needed for validation
+                null, // Refresh token not needed for validation
+                user.getRole().getName(),
+                user.getEmail()
+        ));
     }
 
     @PostMapping("/refresh")
