@@ -4,6 +4,7 @@ import com.autohub.api.model.User;
 import com.autohub.api.repository.UserRepository;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import java.util.Map;
@@ -31,18 +32,24 @@ public class AuthenticationController {
     }
 
     /**
-     * Silicon Valley Grade: Identity Validation
-     * Endpoint for the frontend to verify the session and fetch the current role.
+     * Silicon Valley Grade: Identity Validation (Hardened)
+     * Fetches the current principal and reconstructs the session object.
      */
     @GetMapping("/me")
-    public ResponseEntity<AuthenticationResponse> getProfile() {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+    public ResponseEntity<?> getProfile() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated() || authentication.getName().equals("anonymousUser")) {
+            return ResponseEntity.status(401).body(Map.of("message", "Invalid Session"));
+        }
+
+        String email = authentication.getName();
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Session identity not found"));
+                .orElseThrow(() -> new RuntimeException("Identity record missing"));
 
         return ResponseEntity.ok(new AuthenticationResponse(
-                null, // Access token is already in headers
-                null, // Refresh token not needed for validation
+                null,
+                null,
                 user.getRole().getName(),
                 user.getEmail()
         ));
@@ -56,8 +63,10 @@ public class AuthenticationController {
 
     @PostMapping("/logout")
     public ResponseEntity<Map<String, String>> logout() {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        service.logout(email);
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null) {
+            service.logout(auth.getName());
+        }
         return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
     }
 
@@ -65,7 +74,7 @@ public class AuthenticationController {
     public ResponseEntity<Map<String, String>> forgotPassword(@RequestBody Map<String, String> request) {
         String email = request.get("email");
         service.initiatePasswordReset(email);
-        return ResponseEntity.ok(Map.of("message", "If an account exists, a reset link has been sent."));
+        return ResponseEntity.ok(Map.of("message", "Reset protocol initiated."));
     }
 
     @PostMapping("/reset-password")
@@ -73,6 +82,6 @@ public class AuthenticationController {
         String token = request.get("token");
         String newPassword = request.get("newPassword");
         service.completePasswordReset(token, newPassword);
-        return ResponseEntity.ok(Map.of("message", "Password updated successfully. All other sessions have been logged out."));
+        return ResponseEntity.ok(Map.of("message", "Password updated."));
     }
 }
