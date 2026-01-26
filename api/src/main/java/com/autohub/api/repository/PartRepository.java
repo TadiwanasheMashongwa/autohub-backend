@@ -15,11 +15,11 @@ import java.util.Optional;
 @Repository
 public interface PartRepository extends JpaRepository<Part, Long> {
 
-    // --- LOGIC: UNIFIED FILTERING ---
+    // --- LOGIC: UNIFIED FILTERING (Case-Insensitive Restoration) ---
 
     @Query("SELECT p FROM Part p WHERE " +
-            "(:brand IS NULL OR p.brand = :brand) AND " +
-            "(:condition IS NULL OR p.condition = :condition)")
+            "(:brand IS NULL OR LOWER(p.brand) = LOWER(:brand)) AND " +
+            "(:condition IS NULL OR LOWER(p.condition) = LOWER(:condition))")
     Page<Part> findAllWithFilters(@Param("brand") String brand,
                                   @Param("condition") String condition,
                                   Pageable pageable);
@@ -28,16 +28,16 @@ public interface PartRepository extends JpaRepository<Part, Long> {
             "(LOWER(p.name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
             "LOWER(p.sku) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
             "LOWER(p.oemNumber) LIKE LOWER(CONCAT('%', :query, '%'))) AND " +
-            "(:brand IS NULL OR p.brand = :brand) AND " +
-            "(:condition IS NULL OR p.condition = :condition)")
+            "(:brand IS NULL OR LOWER(p.brand) = LOWER(:brand)) AND " +
+            "(:condition IS NULL OR LOWER(p.condition) = LOWER(:condition))")
     Page<Part> searchWithFilters(@Param("query") String query,
                                  @Param("brand") String brand,
                                  @Param("condition") String condition,
                                  Pageable pageable);
 
     @Query("SELECT p FROM Part p WHERE p.category.id = :categoryId AND " +
-            "(:brand IS NULL OR p.brand = :brand) AND " +
-            "(:condition IS NULL OR p.condition = :condition)")
+            "(:brand IS NULL OR LOWER(p.brand) = LOWER(:brand)) AND " +
+            "(:condition IS NULL OR LOWER(p.condition) = LOWER(:condition))")
     Page<Part> findByCategoryWithFilters(@Param("categoryId") Long categoryId,
                                          @Param("brand") String brand,
                                          @Param("condition") String condition,
@@ -51,12 +51,6 @@ public interface PartRepository extends JpaRepository<Part, Long> {
 
     Page<Part> findByStockQuantityLessThan(int threshold, Pageable pageable);
 
-    // --- LOGIC: PERFORMANCE-OPTIMIZED RATING UPDATE ---
-
-    /**
-     * Required by ReviewService.updatePartRating
-     * Directly updates the average rating via Native SQL to prevent locking issues.
-     */
     @Modifying
     @Transactional
     @Query(value = "UPDATE parts SET average_rating = :rating WHERE id = :partId", nativeQuery = true)
