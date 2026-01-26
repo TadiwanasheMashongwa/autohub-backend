@@ -15,35 +15,31 @@ import java.util.Optional;
 @Repository
 public interface PartRepository extends JpaRepository<Part, Long> {
 
-    // --- LOGIC: UNIFIED FILTERING (Case-Insensitive Restoration) ---
-
     @Query("SELECT p FROM Part p WHERE " +
-            "(:brand IS NULL OR LOWER(p.brand) = LOWER(:brand)) AND " +
-            "(:condition IS NULL OR LOWER(p.condition) = LOWER(:condition))")
+            "(:brand IS NULL OR LOWER(CAST(p.brand AS string)) = LOWER(CAST(:brand AS string))) AND " +
+            "(:condition IS NULL OR LOWER(CAST(p.condition AS string)) = LOWER(CAST(:condition AS string)))")
     Page<Part> findAllWithFilters(@Param("brand") String brand,
                                   @Param("condition") String condition,
                                   Pageable pageable);
 
     @Query("SELECT p FROM Part p WHERE " +
-            "(LOWER(p.name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-            "LOWER(p.sku) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-            "LOWER(p.oemNumber) LIKE LOWER(CONCAT('%', :query, '%'))) AND " +
-            "(:brand IS NULL OR LOWER(p.brand) = LOWER(:brand)) AND " +
-            "(:condition IS NULL OR LOWER(p.condition) = LOWER(:condition))")
+            "(LOWER(CAST(p.name AS string)) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+            "LOWER(CAST(p.sku AS string)) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+            "LOWER(CAST(p.oemNumber AS string)) LIKE LOWER(CONCAT('%', :query, '%'))) AND " +
+            "(:brand IS NULL OR LOWER(CAST(p.brand AS string)) = LOWER(CAST(:brand AS string))) AND " +
+            "(:condition IS NULL OR LOWER(CAST(p.condition AS string)) = LOWER(CAST(:condition AS string)))")
     Page<Part> searchWithFilters(@Param("query") String query,
                                  @Param("brand") String brand,
                                  @Param("condition") String condition,
                                  Pageable pageable);
 
     @Query("SELECT p FROM Part p WHERE p.category.id = :categoryId AND " +
-            "(:brand IS NULL OR LOWER(p.brand) = LOWER(:brand)) AND " +
-            "(:condition IS NULL OR LOWER(p.condition) = LOWER(:condition))")
+            "(:brand IS NULL OR LOWER(CAST(p.brand AS string)) = LOWER(CAST(:brand AS string))) AND " +
+            "(:condition IS NULL OR LOWER(CAST(p.condition AS string)) = LOWER(CAST(:condition AS string)))")
     Page<Part> findByCategoryWithFilters(@Param("categoryId") Long categoryId,
                                          @Param("brand") String brand,
                                          @Param("condition") String condition,
                                          Pageable pageable);
-
-    // --- LOGIC: LOGISTICS & INVENTORY ---
 
     Page<Part> findByCompatibleVehiclesId(Long vehicleId, Pageable pageable);
 

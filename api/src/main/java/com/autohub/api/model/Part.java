@@ -36,12 +36,15 @@ public class Part {
   @NotNull(message = "Stock quantity is required")
   private Integer stockQuantity;
 
+  @Column(columnDefinition = "TEXT")
   private String brand;
+
+  @Column(columnDefinition = "TEXT")
   private String condition;
+
   private String imageUrl;
   private String binLocation;
 
-  // NEW: Logistics Fields for Phase 5
   private Double weight; // In Kilograms (kg)
   private String dimensions; // e.g., "20x20x10 cm"
 
@@ -69,7 +72,7 @@ public class Part {
 
   public Part() {}
 
-  // --- GETTERS & SETTERS (Full) ---
+  // --- GETTERS & SETTERS ---
   public Long getId() { return id; }
   public void setId(Long id) { this.id = id; }
   public String getName() { return name; }
