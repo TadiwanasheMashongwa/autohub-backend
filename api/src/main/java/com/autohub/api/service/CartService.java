@@ -31,29 +31,52 @@ public class CartService {
     public Cart addItemToCart(User user, Long partId, Integer quantity) {
         Cart cart = getCart(user);
         Part part = partRepository.findById(partId)
-                .orElseThrow(() -> new RuntimeException("Part not found: " + partId));
+                .orElseThrow(() -> new RuntimeException("Part not found with ID: " + partId));
 
+        // Initial stock check
         if (part.getStockQuantity() < quantity) {
-            throw new RuntimeException("Insufficient stock");
+            throw new RuntimeException("Not enough stock for " + part.getName());
         }
 
-        Optional<CartItem> existing = cart.getItems()
-                .stream()
-                .filter(i -> i.getPart().getId().equals(partId))
+        Optional<CartItem> existingItem = cart.getItems().stream()
+                .filter(item -> item.getPart().getId().equals(partId))
                 .findFirst();
 
-        if (existing.isPresent()) {
-            int newQty = existing.get().getQuantity() + quantity;
-            if (part.getStockQuantity() < newQty) {
-                throw new RuntimeException("Stock exceeded");
+        if (existingItem.isPresent()) {
+            CartItem item = existingItem.get();
+            int finalQuantity = item.getQuantity() + quantity;
+
+            if (part.getStockQuantity() < finalQuantity) {
+                throw new RuntimeException("Adding " + quantity + " more would exceed available stock.");
             }
-            existing.get().setQuantity(newQty);
+            item.setQuantity(finalQuantity);
         } else {
-            CartItem item = new CartItem();
-            item.setCart(cart);
-            item.setPart(part);
-            item.setQuantity(quantity);
-            cart.getItems().add(item);
+            CartItem newItem = new CartItem();
+            newItem.setCart(cart);
+            newItem.setPart(part);
+            newItem.setQuantity(quantity);
+            cart.getItems().add(newItem);
+        }
+
+        return cartRepository.save(cart);
+    }
+
+    @Transactional
+    public Cart updateItemQuantity(User user, Long cartItemId, Integer newQuantity) {
+        Cart cart = getCart(user);
+        CartItem item = cart.getItems().stream()
+                .filter(i -> i.getId().equals(cartItemId))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Item not in cart"));
+
+        if (item.getPart().getStockQuantity() < newQuantity) {
+            throw new RuntimeException("Requested quantity exceeds stock.");
+        }
+
+        if (newQuantity <= 0) {
+            cart.getItems().remove(item);
+        } else {
+            item.setQuantity(newQuantity);
         }
 
         return cartRepository.save(cart);
@@ -62,7 +85,7 @@ public class CartService {
     @Transactional
     public Cart removeItemFromCart(User user, Long cartItemId) {
         Cart cart = getCart(user);
-        cart.getItems().removeIf(i -> i.getId().equals(cartItemId));
+        cart.getItems().removeIf(item -> item.getId().equals(cartItemId));
         return cartRepository.save(cart);
     }
 

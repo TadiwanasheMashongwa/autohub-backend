@@ -31,21 +31,23 @@ public class CartController {
     public ResponseEntity<Cart> addItem(
             @RequestParam Long partId,
             @RequestParam Integer quantity,
-            Authentication authentication
-    ) {
-        return ResponseEntity.ok(
-                cartService.addItemToCart(getUser(authentication), partId, quantity)
-        );
+            Authentication authentication) {
+        return ResponseEntity.ok(cartService.addItemToCart(getUser(authentication), partId, quantity));
+    }
+
+    @PutMapping("/update/{cartItemId}")
+    public ResponseEntity<Cart> updateQuantity(
+            @PathVariable Long cartItemId,
+            @RequestParam Integer quantity,
+            Authentication authentication) {
+        return ResponseEntity.ok(cartService.updateItemQuantity(getUser(authentication), cartItemId, quantity));
     }
 
     @DeleteMapping("/item/{id}")
     public ResponseEntity<Cart> removeItem(
             @PathVariable Long id,
-            Authentication authentication
-    ) {
-        return ResponseEntity.ok(
-                cartService.removeItemFromCart(getUser(authentication), id)
-        );
+            Authentication authentication) {
+        return ResponseEntity.ok(cartService.removeItemFromCart(getUser(authentication), id));
     }
 
     @DeleteMapping("/clear")
@@ -56,8 +58,6 @@ public class CartController {
 
     private User getUser(Authentication authentication) {
         return userRepository.findByEmail(authentication.getName())
-                .orElseThrow(() ->
-                        new RuntimeException("User not found with email: " + authentication.getName())
-                );
+                .orElseThrow(() -> new RuntimeException("User not found"));
     }
 }

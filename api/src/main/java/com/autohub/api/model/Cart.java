@@ -2,6 +2,7 @@ package com.autohub.api.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,7 +15,7 @@ public class Cart {
 
     @OneToOne
     @JoinColumn(name = "user_id")
-    @JsonIgnore // CRITICAL: Prevents Cart -> User -> Cart loop
+    @JsonIgnore
     private User user;
 
     @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -27,6 +28,19 @@ public class Cart {
     public Cart() {}
     public Cart(User user) { this.user = user; }
 
+    // --- LOGIC: Computed Fields ---
+
+    public BigDecimal getTotalPrice() {
+        return items.stream()
+                .map(item -> item.getPart().getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    public Integer getItemCount() {
+        return items.stream().mapToInt(CartItem::getQuantity).sum();
+    }
+
+    // --- GETTERS & SETTERS ---
     public Long getId() { return id; }
     public User getUser() { return user; }
     public void setUser(User user) { this.user = user; }
