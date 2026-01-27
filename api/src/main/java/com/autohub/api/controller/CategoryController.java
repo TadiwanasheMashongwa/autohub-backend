@@ -26,7 +26,13 @@ public class CategoryController {
     public List<Category> getAllCategories() {
         return categoryService.getAllCategories();
     }
-
+    /**
+     * AUDIT #8.6: Search categories by keyword.
+     */
+    @GetMapping("/search")
+    public List<Category> search(@RequestParam String query) {
+        return categoryService.searchCategories(query);
+    }
     /**
      * AUDIT #8.3: Get specific category details.
      */

@@ -23,6 +23,9 @@ public class CategoryService {
         return categoryRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Category not found with id: " + id));
     }
+    public List<Category> searchCategories(String query) {
+        return categoryRepository.searchCategories(query);
+    }
 
     /**
      * AUDIT #8.2: Logic to create a new category with duplicate check.
