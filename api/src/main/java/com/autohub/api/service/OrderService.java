@@ -40,15 +40,11 @@ public class OrderService {
 
     @Transactional
     public Order checkoutCart(User user, String idempotencyKey) {
-
         if (idempotencyKey != null) {
             Optional<IdempotencyRecord> cached = idempotencyRepository.findById(idempotencyKey);
             if (cached.isPresent()) {
                 try {
-                    return objectMapper.readValue(
-                            cached.get().getResponseBody(),
-                            Order.class
-                    );
+                    return objectMapper.readValue(cached.get().getResponseBody(), Order.class);
                 } catch (Exception e) {
                     throw new RuntimeException("Failed to restore idempotent order");
                 }
@@ -62,18 +58,16 @@ public class OrderService {
             throw new RuntimeException("Cannot checkout empty cart");
         }
 
-        PricingService.PricingResult pricing =
-                pricingService.calculatePricing(cart);
+        PricingService.PricingResult pricing = pricingService.calculatePricing(cart);
 
         Order order = new Order();
         order.setUser(user);
         order.setStatus(OrderStatus.PENDING);
-        order.setDiscountAmount(pricing.getDiscount());
-        order.setCouponCode(pricing.getCouponCode());
+        order.setDiscountAmount(pricing.getDiscount()); // Compiles now
+        order.setCouponCode(pricing.getCouponCode());   // Compiles now
         order.setTotalAmount(pricing.getTotal());
 
         List<OrderItem> items = new ArrayList<>();
-
         for (CartItem ci : cart.getItems()) {
             OrderItem oi = new OrderItem();
             oi.setPart(ci.getPart());
@@ -83,9 +77,7 @@ public class OrderService {
         }
 
         order.setItems(items);
-
         Order savedOrder = orderRepository.save(order);
-
         inventoryService.reserveInventory(savedOrder);
 
         cart.getItems().clear();
@@ -96,13 +88,11 @@ public class OrderService {
 
         if (idempotencyKey != null) {
             try {
-                idempotencyRepository.save(
-                        new IdempotencyRecord(
-                                idempotencyKey,
-                                objectMapper.writeValueAsString(savedOrder),
-                                200
-                        )
-                );
+                idempotencyRepository.save(new IdempotencyRecord(
+                        idempotencyKey,
+                        objectMapper.writeValueAsString(savedOrder),
+                        200
+                ));
             } catch (Exception ignored) {}
         }
 
@@ -133,9 +123,8 @@ public class OrderService {
 
         return manifest;
     }
-    // Add to OrderService.java
+
     public List<Order> findOrdersByUser(User user) {
-        // You'll need to add: List<Order> findByUserOrderByOrderDateDesc(User user) to OrderRepository
         return orderRepository.findByUserOrderByOrderDateDesc(user);
     }
 

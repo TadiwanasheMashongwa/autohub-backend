@@ -31,6 +31,7 @@ public class Order {
     private BigDecimal discountAmount = BigDecimal.ZERO;
     private BigDecimal refundedAmount = BigDecimal.ZERO;
 
+    private String couponCode;
     private String trackingNumber;
     private String courierName;
     private String paymentId;
@@ -45,29 +46,38 @@ public class Order {
         this.status = OrderStatus.PENDING;
     }
 
+    // --- GETTERS ---
     public Long getId() { return id; }
     public User getUser() { return user; }
-    public void setUser(User user) { this.user = user; }
     public OrderStatus getStatus() { return status; }
-    public void setStatus(OrderStatus status) { this.status = status; }
     public BigDecimal getTotalAmount() { return totalAmount; }
-    public void setTotalAmount(BigDecimal totalAmount) { this.totalAmount = totalAmount; }
-    public String getTrackingNumber() { return trackingNumber; }
-    public void setTrackingNumber(String trackingNumber) { this.trackingNumber = trackingNumber; }
-    public String getCourierName() { return courierName; }
-    public void setCourierName(String courierName) { this.courierName = courierName; }
-    public LocalDateTime getPickedDate() { return pickedDate; }
-    public void setPickedDate(LocalDateTime pickedDate) { this.pickedDate = pickedDate; }
-    public LocalDateTime getShippedDate() { return shippedDate; }
-    public void setShippedDate(LocalDateTime shippedDate) { this.shippedDate = shippedDate; }
-    public LocalDateTime getDeliveryDate() { return deliveryDate; }
-    public void setDeliveryDate(LocalDateTime deliveryDate) { this.deliveryDate = deliveryDate; }
+    public BigDecimal getDiscountAmount() { return discountAmount; }
     public BigDecimal getRefundedAmount() { return refundedAmount; }
-    public void setRefundedAmount(BigDecimal refundedAmount) { this.refundedAmount = refundedAmount; }
-    public List<OrderItem> getItems() { return items; }
-    public void setItems(List<OrderItem> items) { this.items = items; }
+    public String getCouponCode() { return couponCode; }
+    public String getTrackingNumber() { return trackingNumber; }
+    public String getCourierName() { return courierName; }
+    public LocalDateTime getPickedDate() { return pickedDate; }
+    public LocalDateTime getShippedDate() { return shippedDate; }
+    public LocalDateTime getDeliveryDate() { return deliveryDate; }
     public String getPaymentId() { return paymentId; }
-    public void setPaymentId(String paymentId) { this.paymentId = paymentId; }
     public String getPaymentStatus() { return paymentStatus; }
+    public List<OrderItem> getItems() { return items; }
+    public LocalDateTime getOrderDate() { return orderDate; }
+
+    // --- SETTERS (Fixed Discrepancies) ---
+    public void setUser(User user) { this.user = user; }
+    public void setStatus(OrderStatus status) { this.status = status; }
+    public void setTotalAmount(BigDecimal totalAmount) { this.totalAmount = totalAmount; }
+    public void setDiscountAmount(BigDecimal discountAmount) { this.discountAmount = discountAmount; }
+    public void setRefundedAmount(BigDecimal refundedAmount) { this.refundedAmount = refundedAmount; }
+    public void setCouponCode(String couponCode) { this.couponCode = couponCode; }
+    public void setTrackingNumber(String trackingNumber) { this.trackingNumber = trackingNumber; }
+    public void setCourierName(String courierName) { this.courierName = courierName; }
+    public void setPickedDate(LocalDateTime pickedDate) { this.pickedDate = pickedDate; }
+    public void setShippedDate(LocalDateTime shippedDate) { this.shippedDate = shippedDate; }
+    public void setDeliveryDate(LocalDateTime deliveryDate) { this.deliveryDate = deliveryDate; }
+    public void setPaymentId(String paymentId) { this.paymentId = paymentId; }
     public void setPaymentStatus(String paymentStatus) { this.paymentStatus = paymentStatus; }
+    public void setItems(List<OrderItem> items) { this.items = items; }
+    public void setOrderDate(LocalDateTime orderDate) { this.orderDate = orderDate; }
 }
