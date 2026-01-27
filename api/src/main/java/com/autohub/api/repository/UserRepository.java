@@ -41,4 +41,20 @@ public interface UserRepository extends JpaRepository<User, Long> {
      */
     @Query("SELECT u FROM User u WHERE u.role.name = 'ROLE_CUSTOMER'")
     List<User> findAllCustomers();
+    /**
+     * PHASE 3: Staff Management.
+     * Returns all users with the CLERK role.
+     */
+    @Query("SELECT u FROM User u WHERE u.role.name = 'ROLE_CLERK'")
+    List<User> findAllClerks();
+
+    /**
+     * PHASE 3: Global User Search.
+     * Allows searching for staff by email or name.
+     */
+    @Query("SELECT u FROM User u WHERE " +
+            "(LOWER(u.email) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+            "LOWER(u.username) LIKE LOWER(CONCAT('%', :query, '%'))) AND " +
+            "u.role.name = :roleName")
+    List<User> searchByRole(@Param("query") String query, @Param("roleName") String roleName);
 }

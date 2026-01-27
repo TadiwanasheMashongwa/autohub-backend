@@ -153,4 +153,31 @@ public class AdminController {
         stats.put("lowStockCount", partService.getLowStockParts().size());
         return ResponseEntity.ok(stats);
     }
+    /* -------- STAFF MANAGEMENT (PHASE 3) -------- */
+
+    @GetMapping("/clerks")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<User>> getAllClerks() {
+        return ResponseEntity.ok(userRepository.findAllClerks());
+    }
+
+    @GetMapping("/clerks/search")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<User>> searchClerks(@RequestParam String query) {
+        return ResponseEntity.ok(userRepository.searchByRole(query, "ROLE_CLERK"));
+    }
+
+    @DeleteMapping("/clerks/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteClerk(@PathVariable Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Clerk not found"));
+
+        if (user.getRole().getName().equals("ROLE_ADMIN")) {
+            throw new RuntimeException("Security Protocol: Cannot delete Admin accounts via this terminal.");
+        }
+
+        userRepository.delete(user);
+        return ResponseEntity.noContent().build();
+    }
 }
