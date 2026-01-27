@@ -133,4 +133,14 @@ public class OrderService {
 
         return manifest;
     }
+    // Add to OrderService.java
+    public List<Order> findOrdersByUser(User user) {
+        // You'll need to add: List<Order> findByUserOrderByOrderDateDesc(User user) to OrderRepository
+        return orderRepository.findByUserOrderByOrderDateDesc(user);
+    }
+
+    public Order getOrderById(Long id) {
+        return orderRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Order not found: " + id));
+    }
 }

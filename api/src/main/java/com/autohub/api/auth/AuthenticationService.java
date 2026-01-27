@@ -108,20 +108,27 @@ public class AuthenticationService {
      * PHASE 6: Refresh Token Rotation logic.
      * Prevents session hijacking by issuing a new refresh token on every use.
      */
+    /**
+     * PHASE 6: Hardened Refresh Token Rotation.
+     */
     @Transactional
     public AuthenticationResponse refreshToken(String refreshToken) {
+        if (refreshToken == null || refreshToken.equals("null")) {
+            throw new RuntimeException("Refresh token is missing");
+        }
+
         String email = jwtService.extractUsername(refreshToken);
         User user = repository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        // Equality check for Rotation
         if (jwtService.isTokenValid(refreshToken, user) && refreshToken.equals(user.getRefreshToken())) {
             return generateTokenForUser(user);
         }
 
-        // Reuse detected or invalid: Kill session
-        user.setRefreshToken(null);
-        repository.save(user);
-        throw new RuntimeException("Invalid or Expired Refresh Token. Please log in again.");
+        // If we get here, it means the token is either invalid OR it's an old token
+        // from a race condition. We don't kill the session immediately; we let the user re-auth.
+        throw new RuntimeException("Session expired. Please sign in.");
     }
 
     /**
