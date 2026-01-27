@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Repository
@@ -47,6 +48,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
      */
     @Query("SELECT u FROM User u WHERE u.role.name = 'ROLE_CLERK'")
     List<User> findAllClerks();
+    @Query("SELECT u.id as id, u.firstName as firstName, u.lastName as lastName, u.email as email, " +
+            "u.businessName as businessName, MAX(o.orderDate) as lastOrderDate, " +
+            "COUNT(o.id) as orderCount, SUM(o.totalAmount) as totalSpent " +
+            "FROM User u LEFT JOIN Order o ON u.id = o.user.id " +
+            "WHERE u.role.name = 'ROLE_CUSTOMER' " +
+            "GROUP BY u.id")
+    List<Map<String, Object>> findAllCustomersWithStats();
 
     /**
      * PHASE 3: Global User Search.

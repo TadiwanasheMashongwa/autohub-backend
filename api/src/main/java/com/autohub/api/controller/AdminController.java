@@ -11,7 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,124 +22,46 @@ public class AdminController {
 
     private final OrderService orderService;
     private final PartService partService;
-    private final WarehouseService warehouseService;
-    private final LogisticsService logisticsService;
-    private final OrderLifecycleService lifecycleService;
     private final UserRepository userRepository;
     private final AuthenticationService authenticationService;
+    // ... other services (Warehouse, Logistics, etc.)
 
-    public AdminController(OrderService orderService,
-                           PartService partService,
-                           WarehouseService warehouseService,
-                           LogisticsService logisticsService,
-                           OrderLifecycleService lifecycleService,
-                           UserRepository userRepository,
-                           AuthenticationService authenticationService) {
+    public AdminController(OrderService orderService, PartService partService,
+                           UserRepository userRepository, AuthenticationService authenticationService) {
         this.orderService = orderService;
         this.partService = partService;
-        this.warehouseService = warehouseService;
-        this.logisticsService = logisticsService;
-        this.lifecycleService = lifecycleService;
         this.userRepository = userRepository;
         this.authenticationService = authenticationService;
     }
 
-    /* -------- WAREHOUSE -------- */
-
-    @PostMapping("/orders/{orderId}/pick")
-    public ResponseEntity<Order> pick(
-            @PathVariable Long orderId,
-            @RequestParam String barcode) {
-
-        return ResponseEntity.ok(
-                warehouseService.verifyAndPickItem(orderId, barcode)
-        );
-    }
-
-    /* -------- SHIPPING -------- */
-
-    @PostMapping("/orders/{orderId}/ship")
-    public ResponseEntity<Order> ship(
-            @PathVariable Long orderId,
-            @RequestParam String courierName,
-            @RequestParam String trackingNumber) {
-
-        return ResponseEntity.ok(
-                lifecycleService.markShipped(orderId, courierName, trackingNumber)
-        );
-    }
-
-    @PatchMapping("/orders/{orderId}/transit")
-    public ResponseEntity<Order> transit(@PathVariable Long orderId) {
-        return ResponseEntity.ok(
-                lifecycleService.markInTransit(orderId)
-        );
-    }
-
-    @PatchMapping("/orders/{orderId}/delivered")
-    public ResponseEntity<Order> delivered(@PathVariable Long orderId) {
-        return ResponseEntity.ok(
-                lifecycleService.markDelivered(orderId)
-        );
-    }
-
-    /* -------- RETURNS & REFUNDS (FLOW 8.1) -------- */
-
-    @PatchMapping("/orders/{orderId}/returned")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Order> markReturned(@PathVariable Long orderId) {
-        return ResponseEntity.ok(
-                lifecycleService.markReturned(orderId)
-        );
-    }
-
-    @PostMapping("/orders/{orderId}/refund")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Order> refund(@PathVariable Long orderId) {
-        return ResponseEntity.ok(
-                lifecycleService.refund(orderId)
-        );
-    }
-
-    /* -------- INVENTORY -------- */
-
-    @PatchMapping("/inventory/restock")
-    public ResponseEntity<Part> restock(
-            @RequestParam String barcode,
-            @RequestParam Integer quantity) {
-
-        return ResponseEntity.ok(
-                partService.updateStockByBarcode(barcode, quantity)
-        );
-    }
-
-    @PatchMapping("/inventory/{partId}/stock")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Part> adjustStock(
-            @PathVariable Long partId,
-            @RequestParam Integer quantity) {
-
-        return ResponseEntity.ok(
-                partService.manualStockAdjustment(partId, quantity)
-        );
-    }
-
-    /* -------- ADMIN -------- */
+    /* -------- STAFF & CUSTOMER GOVERNANCE -------- */
 
     @PostMapping("/create-clerk")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> createClerk(@RequestBody RegisterRequest request) {
         User clerk = authenticationService.createInternalUser(request, "ROLE_CLERK");
-        return ResponseEntity.ok(Map.of(
-                "message", "Clerk account created successfully",
-                "email", clerk.getEmail()
-        ));
+        return ResponseEntity.ok(Map.of("message", "Clerk initialized", "email", clerk.getEmail()));
     }
 
     @GetMapping("/customers")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<User>> customers() {
-        return ResponseEntity.ok(userRepository.findAllCustomers());
+    public ResponseEntity<List<Map<String, Object>>> customers() {
+        return ResponseEntity.ok(userRepository.findAllCustomersWithStats());
+    }
+
+    @GetMapping("/clerks")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<User>> getAllClerks() {
+        return ResponseEntity.ok(userRepository.findAllClerks());
+    }
+
+    @DeleteMapping("/clerks/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteClerk(@PathVariable Long id) {
+        User user = userRepository.findById(id).orElseThrow();
+        if (user.getRole().getName().equals("ROLE_ADMIN")) throw new RuntimeException("Cannot delete admin.");
+        userRepository.delete(user);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/stats")
@@ -152,32 +73,5 @@ public class AdminController {
         stats.put("totalCustomers", userRepository.countByRoleName("ROLE_CUSTOMER"));
         stats.put("lowStockCount", partService.getLowStockParts().size());
         return ResponseEntity.ok(stats);
-    }
-    /* -------- STAFF MANAGEMENT (PHASE 3) -------- */
-
-    @GetMapping("/clerks")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<User>> getAllClerks() {
-        return ResponseEntity.ok(userRepository.findAllClerks());
-    }
-
-    @GetMapping("/clerks/search")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<User>> searchClerks(@RequestParam String query) {
-        return ResponseEntity.ok(userRepository.searchByRole(query, "ROLE_CLERK"));
-    }
-
-    @DeleteMapping("/clerks/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> deleteClerk(@PathVariable Long id) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Clerk not found"));
-
-        if (user.getRole().getName().equals("ROLE_ADMIN")) {
-            throw new RuntimeException("Security Protocol: Cannot delete Admin accounts via this terminal.");
-        }
-
-        userRepository.delete(user);
-        return ResponseEntity.noContent().build();
     }
 }
