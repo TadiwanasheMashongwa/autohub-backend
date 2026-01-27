@@ -15,6 +15,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByUsername(String username);
     Optional<User> findByEmail(String email);
+    boolean existsByEmail(String email);
+
+    // FIXED: Uses single role relationship
+    List<User> findByRole_Name(String roleName);
+
     Optional<User> findByResetToken(String resetToken);
 
     @Query("SELECT COUNT(u) FROM User u WHERE u.role.name = :roleName")
@@ -23,10 +28,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT u FROM User u WHERE u.role.name = 'ROLE_CLERK'")
     List<User> findAllClerks();
 
-    /**
-     * PHASE 3.2: Financial Intelligence Query.
-     * Explicitly aliasing every field to ensure the Map keys are predictable.
-     */
     @Query("SELECT u.id as id, u.firstName as firstName, u.lastName as lastName, u.email as email, " +
             "u.businessName as businessName, u.phoneNumber as phoneNumber, u.address as address, " +
             "MAX(o.orderDate) as lastOrderDate, " +
