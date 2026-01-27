@@ -2,7 +2,6 @@ package com.autohub.api.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -11,7 +10,6 @@ import java.util.List;
 @Entity
 @Table(name = "orders")
 public class Order {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -22,6 +20,9 @@ public class Order {
     private User user;
 
     private LocalDateTime orderDate;
+    private LocalDateTime pickedDate; // NEW: Phase 5 Efficiency Tracking
+    private LocalDateTime shippedDate;
+    private LocalDateTime deliveryDate;
 
     @Enumerated(EnumType.STRING)
     private OrderStatus status;
@@ -30,14 +31,8 @@ public class Order {
     private BigDecimal discountAmount = BigDecimal.ZERO;
     private BigDecimal refundedAmount = BigDecimal.ZERO;
 
-    private String couponCode;
-    private String returnReason;
-
     private String trackingNumber;
     private String courierName;
-    private LocalDateTime shippedDate;
-    private LocalDateTime deliveryDate;
-
     private String paymentId;
     private String paymentStatus;
 
@@ -50,60 +45,22 @@ public class Order {
         this.status = OrderStatus.PENDING;
     }
 
-    // -------- GETTERS --------
-
+    // --- PHASE 5 GETTERS/SETTERS ---
+    public LocalDateTime getPickedDate() { return pickedDate; }
+    public void setPickedDate(LocalDateTime pickedDate) { this.pickedDate = pickedDate; }
     public Long getId() { return id; }
     public User getUser() { return user; }
     public OrderStatus getStatus() { return status; }
-    public BigDecimal getTotalAmount() { return totalAmount; }
-    public BigDecimal getDiscountAmount() { return discountAmount; }
-    public BigDecimal getRefundedAmount() { return refundedAmount; }
-    public String getCouponCode() { return couponCode; }
-    public String getPaymentId() { return paymentId; }
-    public String getPaymentStatus() { return paymentStatus; }
-    public List<OrderItem> getItems() { return items; }
-    public String getCourierName() { return courierName; }
-    public String getTrackingNumber() { return trackingNumber; }
-
-    public String getReturnReason() {
-        return returnReason;
-    }
-
-    public LocalDateTime getDeliveryDate() {
-        return deliveryDate;
-    }
-    public LocalDateTime getShippedDate() {
-        return shippedDate;
-    }
-
-
-    // -------- SETTERS --------
-
-    public void setReturnReason(String returnReason) {
-        this.returnReason = returnReason;
-    }
-    public void setShippedDate(LocalDateTime shippedDate) {
-        this.shippedDate = shippedDate;
-    }
-    public void setDeliveryDate(LocalDateTime deliveryDate) {
-        this.deliveryDate = deliveryDate;
-    }
-
-    public void setUser(User user) { this.user = user; }
     public void setStatus(OrderStatus status) { this.status = status; }
+    public BigDecimal getTotalAmount() { return totalAmount; }
     public void setTotalAmount(BigDecimal totalAmount) { this.totalAmount = totalAmount; }
-    public void setDiscountAmount(BigDecimal discountAmount) { this.discountAmount = discountAmount; }
+    public String getTrackingNumber() { return trackingNumber; }
+    public void setTrackingNumber(String trackingNumber) { this.trackingNumber = trackingNumber; }
+    public String getCourierName() { return courierName; }
+    public void setCourierName(String courierName) { this.courierName = courierName; }
+    public List<OrderItem> getItems() { return items; }
     public void setRefundedAmount(BigDecimal refundedAmount) { this.refundedAmount = refundedAmount; }
-    public void setCouponCode(String couponCode) { this.couponCode = couponCode; }
-    public void setPaymentId(String paymentId) { this.paymentId = paymentId; }
-    public void setPaymentStatus(String paymentStatus) { this.paymentStatus = paymentStatus; }
-    public void setItems(List<OrderItem> items) { this.items = items; }
-    public void setCourierName(String courierName) {
-        this.courierName = courierName;
-    }
-
-    public void setTrackingNumber(String trackingNumber) {
-        this.trackingNumber = trackingNumber;
-    }
-
+    public BigDecimal getRefundedAmount() { return refundedAmount; }
+    public void setShippedDate(LocalDateTime shippedDate) { this.shippedDate = shippedDate; }
+    public LocalDateTime getShippedDate() { return shippedDate; }
 }

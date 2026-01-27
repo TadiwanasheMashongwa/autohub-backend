@@ -9,38 +9,24 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Map;
 
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long> {
 
-    /**
-     * Fetches a customer's order history sorted by most recent first.
-     * Used in OrderService.findOrdersByUser
-     */
     List<Order> findByUserOrderByOrderDateDesc(User user);
 
     /**
-     * Silicon Valley Grade: Review Eligibility Logic
-     * Ensures a user can only review a part if they have a DELIVERED or COMPLETED
-     * order containing that specific part ID.
+     * PHASE 5: Revenue Time-Series.
+     * Returns a list of dates and total revenue for that day.
      */
-    @Query("""
-        SELECT COUNT(o) > 0
-        FROM Order o
-        JOIN o.items i
-        WHERE o.user.id = :userId
-          AND i.part.id = :partId
-          AND o.status IN (:delivered, :completed)
-    """)
-    boolean existsEligibleDeliveredOrder(
-            @Param("userId") Long userId,
-            @Param("partId") Long partId,
-            @Param("delivered") OrderStatus delivered,
-            @Param("completed") OrderStatus completed
-    );
+    @Query("SELECT CAST(o.orderDate AS date) as date, SUM(o.totalAmount) as amount " +
+            "FROM Order o WHERE o.status IN ('PAID', 'DELIVERED', 'COMPLETED') " +
+            "GROUP BY CAST(o.orderDate AS date) ORDER BY CAST(o.orderDate AS date) ASC")
+    List<Map<String, Object>> getRevenueTrends();
 
-    /**
-     * Counts orders by status for Admin Dashboard metrics.
-     */
+    @Query("SELECT o FROM Order o WHERE o.status NOT IN ('CANCELLED', 'REFUNDED') ORDER BY o.orderDate DESC")
+    List<Order> findAllActiveOrders();
+
     long countByStatus(OrderStatus status);
 }
