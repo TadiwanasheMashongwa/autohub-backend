@@ -53,16 +53,11 @@ public class OrderLifecycleService {
 
     /* ---------------- SHIPPING (PHASE 7 - LOGISTICS) ---------------- */
 
-    /**
-     * Silicon Valley Grade Logistics: Marks order as shipped and triggers notifications.
-     * Matches AdminController:69 requirements.
-     */
     @Transactional
     public Order markShipped(Long orderId, String courier, String tracking) {
         Order order = get(orderId);
         assertStatus(order, OrderStatus.PAID);
 
-        // Validation: Ensure all items were picked before shipping
         boolean allPicked = order.getItems().stream()
                 .allMatch(i -> i.getPickedQuantity() != null && i.getPickedQuantity().equals(i.getQuantity()));
 
@@ -79,7 +74,7 @@ public class OrderLifecycleService {
         try {
             emailService.sendShippingNotification(saved);
         } catch (Exception e) {
-            System.err.println("Non-critical: Shipping notification failed: " + e.getMessage());
+            System.err.println("Non-critical: Shipping notification failed.");
         }
 
         return saved;
@@ -105,7 +100,7 @@ public class OrderLifecycleService {
         try {
             emailService.sendDeliveryConfirmation(saved);
         } catch (Exception e) {
-            System.err.println("Non-critical: Delivery confirmation failed.");
+            System.err.println("Non-critical: Delivery notification failed.");
         }
 
         return saved;
@@ -116,9 +111,8 @@ public class OrderLifecycleService {
     @Transactional
     public Order markReturned(Long orderId) {
         Order order = get(orderId);
-        // Can only return if it was actually delivered
         if (order.getStatus() != OrderStatus.DELIVERED && order.getStatus() != OrderStatus.RETURN_REQUESTED) {
-            throw new RuntimeException("Order must be delivered or requested for return before marking as returned");
+            throw new RuntimeException("Order must be delivered/requested before marking as returned");
         }
 
         order.setStatus(OrderStatus.RETURNED);
@@ -130,21 +124,33 @@ public class OrderLifecycleService {
         Order order = get(orderId);
         assertStatus(order, OrderStatus.RETURNED);
 
-        // Release reservations/restock logic
         inventoryService.releaseReservations(order);
 
         order.setStatus(OrderStatus.REFUNDED);
         order.setPaymentStatus("REFUNDED");
 
-        Order saved = orderRepository.save(order);
+        return orderRepository.save(order);
+    }
 
-        try {
-            emailService.sendRefundConfirmation(saved);
-        } catch (Exception e) {
-            System.err.println("Non-critical: Refund email failed.");
+    /* ---------------- REVIEWS (PHASE 8) ---------------- */
+
+    /**
+     * FIXED: Added OrderStatus.COMPLETED to match the 4-argument signature
+     * in OrderRepository.existsEligibleDeliveredOrder.
+     */
+    public void assertCanReview(User user, Long partId) {
+        boolean eligible = orderRepository.existsEligibleDeliveredOrder(
+                user.getId(),
+                partId,
+                OrderStatus.DELIVERED,
+                OrderStatus.COMPLETED
+        );
+
+        if (!eligible) {
+            throw new RuntimeException(
+                    "Review blocked: Part not purchased or order not yet delivered/completed."
+            );
         }
-
-        return saved;
     }
 
     /* ---------------- HELPERS ---------------- */
