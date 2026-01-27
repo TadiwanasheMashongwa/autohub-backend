@@ -18,11 +18,15 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByResetToken(String resetToken);
 
     @Query("SELECT COUNT(u) FROM User u WHERE u.role.name = :roleName")
-    long countByRoleName(@Param( "roleName") String roleName);
+    long countByRoleName(@Param("roleName") String roleName);
 
     @Query("SELECT u FROM User u WHERE u.role.name = 'ROLE_CLERK'")
     List<User> findAllClerks();
 
+    /**
+     * PHASE 3.2: Financial Intelligence Query.
+     * Aggregates LTV, Order Counts, and Activity while maintaining identity fields (Email).
+     */
     @Query("SELECT u.id as id, u.firstName as firstName, u.lastName as lastName, u.email as email, " +
             "u.businessName as businessName, u.phoneNumber as phoneNumber, u.address as address, " +
             "MAX(o.orderDate) as lastOrderDate, " +
