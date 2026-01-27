@@ -5,14 +5,15 @@ import com.autohub.api.model.User;
 import com.autohub.api.repository.UserRepository;
 import com.autohub.api.service.OrderService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/orders")
+@PreAuthorize("hasAnyRole('CUSTOMER', 'ADMIN', 'CLERK')")
 public class OrderController {
 
     private final OrderService orderService;
@@ -23,11 +24,8 @@ public class OrderController {
         this.userRepository = userRepository;
     }
 
-    /**
-     * Silicon Valley Grade: Atomic Checkout
-     * Converts Cart to Order and reserves inventory in one transaction.
-     */
     @PostMapping("/checkout")
+    @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<Order> checkout(
             @RequestHeader(value = "X-Idempotency-Key", required = false) String idempotencyKey
     ) {
@@ -40,10 +38,11 @@ public class OrderController {
     }
 
     @GetMapping("/my-orders")
+    @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<List<Order>> getMyOrders() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        User user = userRepository.findByEmail(email).orElseThrow();
-        // Assuming you add findByUser to OrderRepository
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
         return ResponseEntity.ok(orderService.findOrdersByUser(user));
     }
 
