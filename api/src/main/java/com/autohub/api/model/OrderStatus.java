@@ -2,6 +2,8 @@ package com.autohub.api.model;
 
 public enum OrderStatus {
     PENDING,
+    PAID,
+    PICKED, // NEW: Physical verification complete
     SHIPPED,
     IN_TRANSIT,
     DELIVERED,
@@ -9,6 +11,5 @@ public enum OrderStatus {
     CANCELLED,
     RETURN_REQUESTED,
     RETURNED,
-    PAID,
     REFUNDED
 }

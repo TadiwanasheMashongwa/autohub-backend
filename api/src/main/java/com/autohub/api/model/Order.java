@@ -64,7 +64,7 @@ public class Order {
     public List<OrderItem> getItems() { return items; }
     public LocalDateTime getOrderDate() { return orderDate; }
 
-    // --- SETTERS (Fixed Discrepancies) ---
+    // --- SETTERS ---
     public void setUser(User user) { this.user = user; }
     public void setStatus(OrderStatus status) { this.status = status; }
     public void setTotalAmount(BigDecimal totalAmount) { this.totalAmount = totalAmount; }

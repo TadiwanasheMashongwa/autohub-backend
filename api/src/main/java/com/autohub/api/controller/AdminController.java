@@ -39,14 +39,17 @@ public class AdminController {
         return ResponseEntity.ok(orderRepository.findAllActiveOrders());
     }
 
+    // PHASE 5.5: Clerk Verification Endpoint
+    @PostMapping("/orders/{id}/verify-pick")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CLERK')")
+    public ResponseEntity<Order> verifyPick(@PathVariable Long id, @RequestBody Map<String, String> verifyMap) {
+        return ResponseEntity.ok(lifecycleService.verifyAndPick(id, verifyMap));
+    }
+
     @PatchMapping("/orders/{id}/logistics")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Order> updateLogistics(@PathVariable Long id, @RequestBody Map<String, String> logistics) {
-        return ResponseEntity.ok(lifecycleService.overrideLogistics(
-                id,
-                logistics.get("courier"),
-                logistics.get("tracking")
-        ));
+        return ResponseEntity.ok(lifecycleService.overrideLogistics(id, logistics.get("courier"), logistics.get("tracking")));
     }
 
     @PostMapping("/orders/{id}/refund")
