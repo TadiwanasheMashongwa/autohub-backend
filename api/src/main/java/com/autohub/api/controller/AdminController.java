@@ -2,8 +2,6 @@ package com.autohub.api.controller;
 
 import com.autohub.api.auth.AuthenticationService;
 import com.autohub.api.auth.RegisterRequest;
-import com.autohub.api.model.Order;
-import com.autohub.api.model.Part;
 import com.autohub.api.model.User;
 import com.autohub.api.repository.UserRepository;
 import com.autohub.api.service.*;
@@ -24,7 +22,6 @@ public class AdminController {
     private final PartService partService;
     private final UserRepository userRepository;
     private final AuthenticationService authenticationService;
-    // ... other services (Warehouse, Logistics, etc.)
 
     public AdminController(OrderService orderService, PartService partService,
                            UserRepository userRepository, AuthenticationService authenticationService) {
@@ -34,19 +31,17 @@ public class AdminController {
         this.authenticationService = authenticationService;
     }
 
-    /* -------- STAFF & CUSTOMER GOVERNANCE -------- */
+    @GetMapping("/customers")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<Map<String, Object>>> customers() {
+        return ResponseEntity.ok(userRepository.findAllCustomersWithStats());
+    }
 
     @PostMapping("/create-clerk")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> createClerk(@RequestBody RegisterRequest request) {
         User clerk = authenticationService.createInternalUser(request, "ROLE_CLERK");
         return ResponseEntity.ok(Map.of("message", "Clerk initialized", "email", clerk.getEmail()));
-    }
-
-    @GetMapping("/customers")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<Map<String, Object>>> customers() {
-        return ResponseEntity.ok(userRepository.findAllCustomersWithStats());
     }
 
     @GetMapping("/clerks")
@@ -59,7 +54,7 @@ public class AdminController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteClerk(@PathVariable Long id) {
         User user = userRepository.findById(id).orElseThrow();
-        if (user.getRole().getName().equals("ROLE_ADMIN")) throw new RuntimeException("Cannot delete admin.");
+        if (user.getRole().getName().equals("ROLE_ADMIN")) throw new RuntimeException("Security: Cannot delete ROOT.");
         userRepository.delete(user);
         return ResponseEntity.noContent().build();
     }

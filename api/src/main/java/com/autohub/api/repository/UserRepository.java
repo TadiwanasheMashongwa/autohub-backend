@@ -25,7 +25,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     /**
      * PHASE 3.2: Financial Intelligence Query.
-     * Aggregates LTV, Order Counts, and Activity while maintaining identity fields (Email).
+     * Explicitly aliasing every field to ensure the Map keys are predictable.
      */
     @Query("SELECT u.id as id, u.firstName as firstName, u.lastName as lastName, u.email as email, " +
             "u.businessName as businessName, u.phoneNumber as phoneNumber, u.address as address, " +
