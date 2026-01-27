@@ -23,37 +23,43 @@ public class PaymentController {
         this.lifecycle = lifecycle;
     }
 
+    /**
+     * Phase 6: Handshake Initiation
+     * Returns the Stripe clientSecret to the React frontend.
+     */
     @PostMapping("/initiate/{orderId}")
     @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<Map<String, String>> initiate(@PathVariable Long orderId) {
         return ResponseEntity.ok(paymentService.initiatePayment(orderId));
     }
 
-    @PostMapping("/webhook")
-    public ResponseEntity<String> webhook(
-            @RequestHeader("X-Gateway-Token") String signature,
-            @RequestBody Map<String, String> payload) {
-
-        if (!paymentService.isValidWebhookSignature(signature)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Signature");
-        }
-
-        lifecycle.markPaid(
-                Long.parseLong(payload.get("orderId")),
-                payload.get("paymentId")
-        );
-
-        return ResponseEntity.ok("Webhook processed");
-    }
-
+    /**
+     * Phase 6: Final Confirmation
+     * Called by the frontend AFTER Stripe has successfully charged the card.
+     */
     @PostMapping("/confirm")
     @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<Order> confirm(@RequestBody Map<String, String> request) {
+        // We use 'paymentIntentId' to match the payload from your frontend CheckoutForm
         return ResponseEntity.ok(
                 lifecycle.markPaid(
                         Long.parseLong(request.get("orderId")),
-                        request.get("paymentId")
+                        request.get("paymentIntentId")
                 )
         );
+    }
+
+    /**
+     * Webhook for asynchronous server-to-server updates from Stripe.
+     * Note: In production, Stripe uses a special 'Stripe-Signature' header.
+     */
+    @PostMapping("/webhook")
+    public ResponseEntity<String> webhook(
+            @RequestHeader(value = "Stripe-Signature", required = false) String signature,
+            @RequestBody String payload) {
+
+        // This is a placeholder for your Webhook implementation
+        // For local development, we'll keep it simple:
+        return ResponseEntity.ok("Received");
     }
 }
