@@ -16,10 +16,6 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     List<Order> findByUserOrderByOrderDateDesc(User user);
 
-    /**
-     * PHASE 5: Revenue Time-Series.
-     * Returns a list of dates and total revenue for that day.
-     */
     @Query("SELECT CAST(o.orderDate AS date) as date, SUM(o.totalAmount) as amount " +
             "FROM Order o WHERE o.status IN ('PAID', 'DELIVERED', 'COMPLETED') " +
             "GROUP BY CAST(o.orderDate AS date) ORDER BY CAST(o.orderDate AS date) ASC")
@@ -29,4 +25,19 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> findAllActiveOrders();
 
     long countByStatus(OrderStatus status);
+
+    @Query("""
+    SELECT COUNT(o) > 0
+    FROM Order o
+    JOIN o.items i
+    WHERE o.user.id = :userId
+      AND i.part.id = :partId
+      AND o.status IN (:delivered, :completed)
+    """)
+    boolean existsEligibleDeliveredOrder(
+            @Param("userId") Long userId,
+            @Param("partId") Long partId,
+            @Param("delivered") OrderStatus delivered,
+            @Param("completed") OrderStatus completed
+    );
 }

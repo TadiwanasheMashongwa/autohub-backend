@@ -1,17 +1,13 @@
 package com.autohub.api.controller;
 
-import com.autohub.api.auth.AuthenticationService;
-import com.autohub.api.auth.RegisterRequest;
-import com.autohub.api.model.Review;
-import com.autohub.api.model.User;
-import com.autohub.api.repository.ReviewRepository;
+import com.autohub.api.model.Order;
+import com.autohub.api.repository.OrderRepository;
 import com.autohub.api.repository.UserRepository;
 import com.autohub.api.service.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -20,25 +16,44 @@ import java.util.Map;
 @PreAuthorize("hasAnyRole('ADMIN', 'CLERK')")
 public class AdminController {
 
-    private final OrderService orderService;
-    private final PartService partService;
-    private final ReviewService reviewService;
-    private final ReviewRepository reviewRepository;
+    private final OrderRepository orderRepository;
+    private final OrderLifecycleService lifecycleService;
     private final UserRepository userRepository;
-    private final AuthenticationService authenticationService;
+    private final PartService partService;
+    private final OrderService orderService;
 
-    public AdminController(OrderService orderService, PartService partService,
-                           ReviewService reviewService, ReviewRepository reviewRepository,
-                           UserRepository userRepository, AuthenticationService authenticationService) {
-        this.orderService = orderService;
-        this.partService = partService;
-        this.reviewService = reviewService;
-        this.reviewRepository = reviewRepository;
+    public AdminController(OrderRepository orderRepository,
+                           OrderLifecycleService lifecycleService,
+                           UserRepository userRepository,
+                           PartService partService,
+                           OrderService orderService) {
+        this.orderRepository = orderRepository;
+        this.lifecycleService = lifecycleService;
         this.userRepository = userRepository;
-        this.authenticationService = authenticationService;
+        this.partService = partService;
+        this.orderService = orderService;
     }
 
-    /* -------- STAFF & CUSTOMER GOVERNANCE -------- */
+    @GetMapping("/orders/active")
+    public ResponseEntity<List<Order>> getActiveOrders() {
+        return ResponseEntity.ok(orderRepository.findAllActiveOrders());
+    }
+
+    @PatchMapping("/orders/{id}/logistics")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Order> updateLogistics(@PathVariable Long id, @RequestBody Map<String, String> logistics) {
+        return ResponseEntity.ok(lifecycleService.overrideLogistics(
+                id,
+                logistics.get("courier"),
+                logistics.get("tracking")
+        ));
+    }
+
+    @PostMapping("/orders/{id}/refund")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Order> processRefund(@PathVariable Long id) {
+        return ResponseEntity.ok(lifecycleService.executeRefund(id));
+    }
 
     @GetMapping("/customers")
     @PreAuthorize("hasRole('ADMIN')")
@@ -46,33 +61,14 @@ public class AdminController {
         return ResponseEntity.ok(userRepository.findAllCustomersWithStats());
     }
 
-    /* -------- BRAND SENTIMENT (PHASE 4) -------- */
-
-    @GetMapping("/reviews")
-    public ResponseEntity<List<Review>> getReviews(@RequestParam(defaultValue = "false") boolean negativeOnly) {
-        if (negativeOnly) {
-            return ResponseEntity.ok(reviewRepository.findNegativeSentimentReviews());
-        }
-        return ResponseEntity.ok(reviewRepository.findAllByOrderByCreatedAtDesc());
-    }
-
-    @DeleteMapping("/reviews/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> deleteReview(@PathVariable Long id) {
-        reviewService.deleteReview(id);
-        return ResponseEntity.noContent().build();
-    }
-
-    /* -------- STATS -------- */
-
     @GetMapping("/stats")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> stats() {
-        Map<String, Object> stats = new HashMap<>();
-        stats.put("totalRevenue", orderService.calculateTotalRevenue());
-        stats.put("totalOrders", orderService.getTotalOrderCount());
-        stats.put("totalCustomers", userRepository.countByRoleName("ROLE_CUSTOMER"));
-        stats.put("lowStockCount", partService.getLowStockParts().size());
-        return ResponseEntity.ok(stats);
+        return ResponseEntity.ok(Map.of(
+                "totalRevenue", orderService.calculateTotalRevenue(),
+                "totalOrders", orderService.getTotalOrderCount(),
+                "totalCustomers", userRepository.countByRoleName("ROLE_CUSTOMER"),
+                "lowStockCount", partService.getLowStockParts().size()
+        ));
     }
 }

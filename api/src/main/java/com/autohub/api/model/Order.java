@@ -20,7 +20,7 @@ public class Order {
     private User user;
 
     private LocalDateTime orderDate;
-    private LocalDateTime pickedDate; // NEW: Phase 5 Efficiency Tracking
+    private LocalDateTime pickedDate;
     private LocalDateTime shippedDate;
     private LocalDateTime deliveryDate;
 
@@ -45,11 +45,9 @@ public class Order {
         this.status = OrderStatus.PENDING;
     }
 
-    // --- PHASE 5 GETTERS/SETTERS ---
-    public LocalDateTime getPickedDate() { return pickedDate; }
-    public void setPickedDate(LocalDateTime pickedDate) { this.pickedDate = pickedDate; }
     public Long getId() { return id; }
     public User getUser() { return user; }
+    public void setUser(User user) { this.user = user; }
     public OrderStatus getStatus() { return status; }
     public void setStatus(OrderStatus status) { this.status = status; }
     public BigDecimal getTotalAmount() { return totalAmount; }
@@ -58,9 +56,18 @@ public class Order {
     public void setTrackingNumber(String trackingNumber) { this.trackingNumber = trackingNumber; }
     public String getCourierName() { return courierName; }
     public void setCourierName(String courierName) { this.courierName = courierName; }
-    public List<OrderItem> getItems() { return items; }
-    public void setRefundedAmount(BigDecimal refundedAmount) { this.refundedAmount = refundedAmount; }
-    public BigDecimal getRefundedAmount() { return refundedAmount; }
-    public void setShippedDate(LocalDateTime shippedDate) { this.shippedDate = shippedDate; }
+    public LocalDateTime getPickedDate() { return pickedDate; }
+    public void setPickedDate(LocalDateTime pickedDate) { this.pickedDate = pickedDate; }
     public LocalDateTime getShippedDate() { return shippedDate; }
+    public void setShippedDate(LocalDateTime shippedDate) { this.shippedDate = shippedDate; }
+    public LocalDateTime getDeliveryDate() { return deliveryDate; }
+    public void setDeliveryDate(LocalDateTime deliveryDate) { this.deliveryDate = deliveryDate; }
+    public BigDecimal getRefundedAmount() { return refundedAmount; }
+    public void setRefundedAmount(BigDecimal refundedAmount) { this.refundedAmount = refundedAmount; }
+    public List<OrderItem> getItems() { return items; }
+    public void setItems(List<OrderItem> items) { this.items = items; }
+    public String getPaymentId() { return paymentId; }
+    public void setPaymentId(String paymentId) { this.paymentId = paymentId; }
+    public String getPaymentStatus() { return paymentStatus; }
+    public void setPaymentStatus(String paymentStatus) { this.paymentStatus = paymentStatus; }
 }
