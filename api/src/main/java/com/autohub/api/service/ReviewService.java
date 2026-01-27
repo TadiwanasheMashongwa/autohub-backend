@@ -28,7 +28,6 @@ public class ReviewService {
 
     @Transactional
     public Review addReview(User user, Long partId, Double rating, String comment) {
-
         lifecycleService.assertCanReview(user, partId);
 
         if (reviewRepository.existsByUserIdAndPartId(user.getId(), partId)) {
@@ -49,10 +48,25 @@ public class ReviewService {
         return saved;
     }
 
+    /**
+     * PHASE 4.1: Moderation Purge.
+     * Deletes review and recalculates the part's average rating.
+     */
+    @Transactional
+    public void deleteReview(Long reviewId) {
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new RuntimeException("Review not found"));
+        Long partId = review.getPart().getId();
+
+        reviewRepository.delete(review);
+        updatePartRating(partId);
+    }
+
     private void updatePartRating(Long partId) {
         Double avg = reviewRepository.getAverageRatingForPart(partId)
                 .orElse(0.0);
 
+        // Rounding logic: $$ \text{Rating} = \text{round}(\text{avg}, 1) $$
         BigDecimal rounded = BigDecimal.valueOf(avg)
                 .setScale(1, RoundingMode.HALF_UP);
 
