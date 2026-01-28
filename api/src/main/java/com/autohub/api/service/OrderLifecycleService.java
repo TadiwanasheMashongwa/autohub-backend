@@ -23,81 +23,106 @@ public class OrderLifecycleService {
     }
 
     /**
-     * PHASE 5.5: Strict Barcode Verification
-     * @param verifyMap Key = OrderItem ID (String), Value = Scanned Barcode
+     * WAREHOUSE DISPATCH: Strict Barcode Verification (Checklist #1 & #4)
      */
     @Transactional
     public Order verifyAndPick(Long orderId, Map<String, String> verifyMap) {
         Order order = get(orderId);
 
+        // Security: Block picking unless payment confirmed
         if (order.getStatus() != OrderStatus.PAID) {
-            throw new RuntimeException("Picking blocked: Order must be PAID before selection.");
+            throw new RuntimeException("Picking Blocked: Order #" + orderId + " is not in PAID status.");
         }
 
         // --- STRICT BARCODE AUDIT ---
         for (OrderItem item : order.getItems()) {
+            // Key is the OrderItem ID from the Picking Terminal
             String scanned = verifyMap.get(item.getId().toString());
             String actual = item.getPart().getBarcode();
 
             if (scanned == null || !scanned.equals(actual)) {
-                throw new RuntimeException("Barcode Mismatch: Item '" + item.getPart().getName() + "' verification failed.");
+                throw new RuntimeException("Verification Failure: Barcode mismatch for " + item.getPart().getName());
             }
 
-            // Mark item as physically picked
+            // Mark quantities as picked for internal tracking
             item.setPickedQuantity(item.getQuantity());
         }
 
-        order.setStatus(OrderStatus.PICKED);
+        // Checklist #1: Capture pickedDate for efficiency analytics
         order.setPickedDate(LocalDateTime.now());
+        order.setStatus(OrderStatus.PICKED);
+
         return orderRepository.save(order);
     }
 
-    @Transactional
-    public Order markPaid(Long orderId, String paymentId) {
-        Order order = get(orderId);
-        if ("PAID".equals(order.getPaymentStatus())) return order;
-
-        order.setPaymentId(paymentId);
-        order.setPaymentStatus("PAID");
-        order.setStatus(OrderStatus.PAID);
-        inventoryService.deductReservedInventory(order);
-
-        Order saved = orderRepository.save(order);
-        try { emailService.sendOrderConfirmation(saved); } catch (Exception ignored) {}
-        return saved;
-    }
-
+    /**
+     * LOGISTICS HANDSHAKE: Shipping Guardrails (Checklist #2)
+     */
     @Transactional
     public Order markShipped(Long orderId, String courier, String tracking) {
         Order order = get(orderId);
 
-        // --- GUARDRAIL: Must be verified by Clerk first ---
+        // Checklist #2: Sequential Enforcement (Must be PICKED first)
         if (order.getStatus() != OrderStatus.PICKED) {
-            throw new RuntimeException("Shipping blocked: Order must be physically PICKED and verified first.");
+            throw new RuntimeException("Shipping Blocked: Order must be verified and PICKED before dispatch.");
+        }
+
+        // Checklist #2: Mandatory Courier & Tracking entry
+        if (courier == null || courier.trim().isEmpty() || tracking == null || tracking.trim().isEmpty()) {
+            throw new RuntimeException("Shipping Blocked: Missing courier name or tracking number.");
         }
 
         order.setCourierName(courier);
         order.setTrackingNumber(tracking);
         order.setShippedDate(LocalDateTime.now());
         order.setStatus(OrderStatus.SHIPPED);
-        return orderRepository.save(order);
+
+        Order saved = orderRepository.save(order);
+
+        // Checklist #2: Auto-Notification after confirmation
+        try {
+            emailService.sendShippingNotification(saved);
+        } catch (Exception e) {
+            // Log error but don't roll back the transaction
+        }
+
+        return saved;
+    }
+
+    @Transactional
+    public Order markPaid(Long orderId, String paymentId) {
+        Order order = get(orderId);
+
+        // Prevent double processing
+        if (order.getStatus() == OrderStatus.PAID) return order;
+
+        order.setPaymentId(paymentId);
+        order.setPaymentStatus("PAID");
+        order.setStatus(OrderStatus.PAID);
+
+        // Checklist #4: Stock Locking (Confirming reserved inventory)
+        inventoryService.deductReservedInventory(order);
+
+        Order saved = orderRepository.save(order);
+        try {
+            emailService.sendOrderConfirmation(saved);
+        } catch (Exception ignored) {}
+
+        return saved;
     }
 
     @Transactional
     public Order executeRefund(Long orderId) {
         Order order = get(orderId);
+
+        // Checklist #3: Role Governance - Handled by Security/Controller
         order.setRefundedAmount(order.getTotalAmount());
         order.setStatus(OrderStatus.REFUNDED);
         order.setPaymentStatus("REFUNDED");
-        inventoryService.releaseReservations(order);
-        return orderRepository.save(order);
-    }
 
-    @Transactional
-    public Order overrideLogistics(Long orderId, String courier, String tracking) {
-        Order order = get(orderId);
-        order.setCourierName(courier);
-        order.setTrackingNumber(tracking);
+        // Release any reserved stock
+        inventoryService.releaseReservations(order);
+
         return orderRepository.save(order);
     }
 

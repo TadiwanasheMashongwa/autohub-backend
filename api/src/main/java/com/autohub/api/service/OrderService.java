@@ -63,8 +63,8 @@ public class OrderService {
         Order order = new Order();
         order.setUser(user);
         order.setStatus(OrderStatus.PENDING);
-        order.setDiscountAmount(pricing.getDiscount()); // Compiles now
-        order.setCouponCode(pricing.getCouponCode());   // Compiles now
+        order.setDiscountAmount(pricing.getDiscount());
+        order.setCouponCode(pricing.getCouponCode());
         order.setTotalAmount(pricing.getTotal());
 
         List<OrderItem> items = new ArrayList<>();
@@ -78,6 +78,8 @@ public class OrderService {
 
         order.setItems(items);
         Order savedOrder = orderRepository.save(order);
+
+        // Initial reservation (Ghost Inventory Prevention - Checklist #4)
         inventoryService.reserveInventory(savedOrder);
 
         cart.getItems().clear();
@@ -100,8 +102,17 @@ public class OrderService {
     }
 
     public BigDecimal calculateTotalRevenue() {
+        // Updated to include orders currently in the Warehouse workflow
+        List<OrderStatus> revenueStatuses = Arrays.asList(
+                OrderStatus.PAID,
+                OrderStatus.PICKED,
+                OrderStatus.SHIPPED,
+                OrderStatus.IN_TRANSIT,
+                OrderStatus.COMPLETED
+        );
+
         return orderRepository.findAll().stream()
-                .filter(o -> o.getStatus() == OrderStatus.PAID || o.getStatus() == OrderStatus.COMPLETED)
+                .filter(o -> revenueStatuses.contains(o.getStatus()))
                 .map(Order::getTotalAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
@@ -118,6 +129,7 @@ public class OrderService {
         manifest.put("orderId", order.getId());
         manifest.put("customer", order.getUser().getEmail());
         manifest.put("items", order.getItems());
+        manifest.put("status", order.getStatus());
         manifest.put("courier", order.getCourierName());
         manifest.put("trackingNumber", order.getTrackingNumber());
 
