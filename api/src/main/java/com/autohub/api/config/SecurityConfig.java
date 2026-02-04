@@ -47,12 +47,12 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/webjars/**",
-                                "/swagger-resources/**"
+                                "/swagger-resources/**",
+                                "/uploads/**" // 🔓 CRITICAL: Allow images to be viewed without a token
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/parts/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/vehicles/**").permitAll()
-                        // SILICON VALLEY GRADE: Explicit Order & Payment Protection
                         .requestMatchers("/api/v1/orders/**").hasAnyRole("CUSTOMER", "ADMIN", "CLERK")
                         .requestMatchers("/api/v1/payments/**").hasAnyRole("CUSTOMER", "ADMIN")
                         .anyRequest().authenticated()
