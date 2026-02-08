@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime; // 🛠️ MODERN JAVA TIME IMPORT
 import java.util.*;
 import java.math.BigDecimal;
 
@@ -62,7 +63,7 @@ public class OrderService {
 
         Order order = new Order();
         order.setUser(user);
-        order.setOrderDate(new Date());
+        order.setOrderDate(LocalDateTime.now()); // 🛠️ FIX: Matches LocalDateTime type
         order.setStatus(OrderStatus.PENDING);
         order.setDiscountAmount(pricing.getDiscount());
         order.setCouponCode(pricing.getCouponCode());
@@ -80,6 +81,7 @@ public class OrderService {
         order.setItems(items);
         Order savedOrder = orderRepository.save(order);
 
+        // Ghost Inventory Prevention
         inventoryService.reserveInventory(savedOrder);
 
         cart.getItems().clear();
