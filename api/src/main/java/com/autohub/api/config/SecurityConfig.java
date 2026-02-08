@@ -40,35 +40,21 @@ public class SecurityConfig {
                     return corsConfiguration;
                 }))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/api/v1/auth/**",
-                                "/api/v1/health",
-                                "/v3/api-docs/**",
-                                "/swagger-ui/**",
-                                "/swagger-ui.html",
-                                "/webjars/**",
-                                "/swagger-resources/**",
-                                "/uploads/**"
-                        ).permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/parts/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/vehicles/**").permitAll()
+                        .requestMatchers("/api/v1/auth/**", "/api/v1/health", "/v3/api-docs/**", "/swagger-ui/**", "/uploads/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/parts/**", "/api/v1/categories/**", "/api/v1/vehicles/**").permitAll()
 
-                        // 🛠️ FIXED: Added Logistics mapping for CLERKS to dispatch orders
-                        .requestMatchers("/api/v1/admin/orders/*/logistics").hasAnyRole("ADMIN", "CLERK")
+                        // Logistics Bridge
+                        .requestMatchers("/api/v1/orders/*/logistics").hasAnyRole("ADMIN", "CLERK")
+                        .requestMatchers("/api/v1/orders/*/status").hasAnyRole("ADMIN", "CLERK")
 
-                        // 🛠️ FIXED: Explicitly allow authenticated users to access cart and orders
+                        // Cart & General Orders
                         .requestMatchers("/api/v1/cart/**").authenticated()
                         .requestMatchers("/api/v1/orders/**").hasAnyRole("CUSTOMER", "ADMIN", "CLERK")
 
                         .requestMatchers("/api/v1/payments/**").hasAnyRole("CUSTOMER", "ADMIN")
-
-                        // Protect everything else
                         .anyRequest().authenticated()
                 )
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 

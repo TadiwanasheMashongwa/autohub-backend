@@ -62,6 +62,7 @@ public class OrderService {
 
         Order order = new Order();
         order.setUser(user);
+        order.setOrderDate(new Date());
         order.setStatus(OrderStatus.PENDING);
         order.setDiscountAmount(pricing.getDiscount());
         order.setCouponCode(pricing.getCouponCode());
@@ -79,7 +80,6 @@ public class OrderService {
         order.setItems(items);
         Order savedOrder = orderRepository.save(order);
 
-        // Initial reservation (Ghost Inventory Prevention - Checklist #4)
         inventoryService.reserveInventory(savedOrder);
 
         cart.getItems().clear();
@@ -101,8 +101,23 @@ public class OrderService {
         return savedOrder;
     }
 
+    @Transactional
+    public Order updateLogistics(Long orderId, String courier, String tracking) {
+        Order order = getOrderById(orderId);
+        order.setCourierName(courier);
+        order.setTrackingNumber(tracking);
+        order.setStatus(OrderStatus.SHIPPED);
+        return orderRepository.save(order);
+    }
+
+    @Transactional
+    public Order updateStatus(Long orderId, OrderStatus status) {
+        Order order = getOrderById(orderId);
+        order.setStatus(status);
+        return orderRepository.save(order);
+    }
+
     public BigDecimal calculateTotalRevenue() {
-        // Updated to include orders currently in the Warehouse workflow
         List<OrderStatus> revenueStatuses = Arrays.asList(
                 OrderStatus.PAID,
                 OrderStatus.PICKED,
@@ -122,8 +137,7 @@ public class OrderService {
     }
 
     public Map<String, Object> getOrderManifest(Long orderId) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
+        Order order = getOrderById(orderId);
 
         Map<String, Object> manifest = new HashMap<>();
         manifest.put("orderId", order.getId());
