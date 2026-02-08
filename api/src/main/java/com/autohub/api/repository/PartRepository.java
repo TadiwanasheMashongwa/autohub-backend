@@ -15,14 +15,16 @@ import java.util.Optional;
 @Repository
 public interface PartRepository extends JpaRepository<Part, Long> {
 
-    @Query("SELECT p FROM Part p WHERE " +
+    // 🛠️ ADDED 'DISTINCT': Prevents duplicate rows if Part has eager collections
+    @Query("SELECT DISTINCT p FROM Part p WHERE " +
             "(:brand IS NULL OR LOWER(CAST(p.brand AS string)) = LOWER(CAST(:brand AS string))) AND " +
             "(:condition IS NULL OR LOWER(CAST(p.condition AS string)) = LOWER(CAST(:condition AS string)))")
     Page<Part> findAllWithFilters(@Param("brand") String brand,
                                   @Param("condition") String condition,
                                   Pageable pageable);
 
-    @Query("SELECT p FROM Part p WHERE " +
+    // 🛠️ ADDED 'DISTINCT'
+    @Query("SELECT DISTINCT p FROM Part p WHERE " +
             "(LOWER(CAST(p.name AS string)) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
             "LOWER(CAST(p.sku AS string)) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
             "LOWER(CAST(p.oemNumber AS string)) LIKE LOWER(CONCAT('%', :query, '%'))) AND " +
@@ -33,7 +35,8 @@ public interface PartRepository extends JpaRepository<Part, Long> {
                                  @Param("condition") String condition,
                                  Pageable pageable);
 
-    @Query("SELECT p FROM Part p WHERE p.category.id = :categoryId AND " +
+    // 🛠️ ADDED 'DISTINCT': This specifically fixes the 500/Duplicate crash on Category pages
+    @Query("SELECT DISTINCT p FROM Part p WHERE p.category.id = :categoryId AND " +
             "(:brand IS NULL OR LOWER(CAST(p.brand AS string)) = LOWER(CAST(:brand AS string))) AND " +
             "(:condition IS NULL OR LOWER(CAST(p.condition AS string)) = LOWER(CAST(:condition AS string)))")
     Page<Part> findByCategoryWithFilters(@Param("categoryId") Long categoryId,

@@ -31,6 +31,11 @@ public class PartService {
         return partRepository.searchWithFilters(query, brand, condition, pageable);
     }
 
+    // 🛠️ NEW: Business logic for Category retrieval
+    public Page<Part> getPartsByCategory(Long categoryId, String brand, String condition, Pageable pageable) {
+        return partRepository.findByCategoryWithFilters(categoryId, brand, condition, pageable);
+    }
+
     public Part getPartById(Long id) {
         return partRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Part not found with ID: " + id));

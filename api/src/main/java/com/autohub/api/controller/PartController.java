@@ -38,12 +38,22 @@ public class PartController {
         return ResponseEntity.ok(service.searchParts(query, brand, condition, pageable));
     }
 
+    // 🛠️ NEW: Handles Category Filtering (e.g., /api/v1/parts/category/3)
+    @GetMapping("/category/{categoryId}")
+    public ResponseEntity<Page<Part>> getPartsByCategory(
+            @PathVariable Long categoryId,
+            @RequestParam(required = false) String brand,
+            @RequestParam(required = false) String condition,
+            Pageable pageable) {
+        return ResponseEntity.ok(service.getPartsByCategory(categoryId, brand, condition, pageable));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<Part> getPartById(@PathVariable Long id) {
         return ResponseEntity.ok(service.getPartById(id));
     }
 
-    /* -------- ADMIN OPERATIONS (PHASE 2) -------- */
+    /* -------- ADMIN OPERATIONS -------- */
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -65,9 +75,6 @@ public class PartController {
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * PHASE 2.2: Compatibility Mapping bridge.
-     */
     @PostMapping("/{partId}/compatibility/{vehicleId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Part> addCompatibility(@PathVariable Long partId, @PathVariable Long vehicleId) {
