@@ -48,13 +48,22 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/webjars/**",
                                 "/swagger-resources/**",
-                                "/uploads/**" // 🔓 CRITICAL: Allow images to be viewed without a token
+                                "/uploads/**"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/parts/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/vehicles/**").permitAll()
+
+                        // 🛠️ FIXED: Added Logistics mapping for CLERKS to dispatch orders
+                        .requestMatchers("/api/v1/admin/orders/*/logistics").hasAnyRole("ADMIN", "CLERK")
+
+                        // 🛠️ FIXED: Explicitly allow authenticated users to access cart and orders
+                        .requestMatchers("/api/v1/cart/**").authenticated()
                         .requestMatchers("/api/v1/orders/**").hasAnyRole("CUSTOMER", "ADMIN", "CLERK")
+
                         .requestMatchers("/api/v1/payments/**").hasAnyRole("CUSTOMER", "ADMIN")
+
+                        // Protect everything else
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
