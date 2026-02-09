@@ -25,6 +25,13 @@ public class OrderController {
         this.userRepository = userRepository;
     }
 
+    // 🛠️ NEW: Endpoint for Clerk to see the Warehouse Queue (PAID, PICKED orders)
+    @GetMapping("/active")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CLERK')")
+    public ResponseEntity<List<Order>> getActiveOrders() {
+        return ResponseEntity.ok(orderService.getAllActiveOrders());
+    }
+
     @PostMapping("/checkout")
     @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<Order> checkout(
@@ -39,7 +46,7 @@ public class OrderController {
     }
 
     @GetMapping("/my-orders")
-    @PreAuthorize("hasAnyRole('CUSTOMER', 'ADMIN', 'CLERK')")
+    @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<List<Order>> getMyOrders() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userRepository.findByEmail(email)

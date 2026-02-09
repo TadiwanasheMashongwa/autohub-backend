@@ -14,23 +14,19 @@ import java.util.Map;
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long> {
 
-    // 🛠️ Standard lookup for Customer History
     List<Order> findByUserOrderByOrderDateDesc(User user);
 
-    // 🛠️ Analytics logic for Admin Terminal Dashboard
     @Query("SELECT CAST(o.orderDate AS date) as date, SUM(o.totalAmount) as amount " +
             "FROM Order o WHERE o.status IN ('PAID', 'DELIVERED', 'COMPLETED', 'SHIPPED') " +
             "GROUP BY CAST(o.orderDate AS date) ORDER BY CAST(o.orderDate AS date) ASC")
     List<Map<String, Object>> getRevenueTrends();
 
-    // 🛠️ Filters out cancelled/refunded orders for the Warehouse Queue
-    @Query("SELECT DISTINCT o FROM Order o WHERE o.status NOT IN ('CANCELLED', 'REFUNDED') ORDER BY o.orderDate DESC")
+    // 🛠️ FIXED: JOIN FETCH user to populate dashboard customer column
+    @Query("SELECT DISTINCT o FROM Order o JOIN FETCH o.user WHERE o.status NOT IN ('CANCELLED', 'REFUNDED') ORDER BY o.orderDate DESC")
     List<Order> findAllActiveOrders();
 
-    // 🛠️ Simple status count for dashboard counters
     long countByStatus(OrderStatus status);
 
-    // 🛠️ Verification for Review Eligibility
     @Query("""
     SELECT COUNT(o) > 0
     FROM Order o

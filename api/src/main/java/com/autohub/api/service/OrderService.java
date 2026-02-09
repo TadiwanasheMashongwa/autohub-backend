@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime; // 🛠️ MODERN JAVA TIME IMPORT
+import java.time.LocalDateTime;
 import java.util.*;
 import java.math.BigDecimal;
 
@@ -63,7 +63,7 @@ public class OrderService {
 
         Order order = new Order();
         order.setUser(user);
-        order.setOrderDate(LocalDateTime.now()); // 🛠️ FIX: Matches LocalDateTime type
+        order.setOrderDate(LocalDateTime.now());
         order.setStatus(OrderStatus.PENDING);
         order.setDiscountAmount(pricing.getDiscount());
         order.setCouponCode(pricing.getCouponCode());
@@ -81,7 +81,7 @@ public class OrderService {
         order.setItems(items);
         Order savedOrder = orderRepository.save(order);
 
-        // Ghost Inventory Prevention
+        // Initial reservation (Ghost Inventory Prevention - Checklist #4)
         inventoryService.reserveInventory(savedOrder);
 
         cart.getItems().clear();
@@ -119,7 +119,12 @@ public class OrderService {
         return orderRepository.save(order);
     }
 
+    public List<Order> getAllActiveOrders() {
+        return orderRepository.findAllActiveOrders();
+    }
+
     public BigDecimal calculateTotalRevenue() {
+        // Updated to include orders currently in the Warehouse workflow
         List<OrderStatus> revenueStatuses = Arrays.asList(
                 OrderStatus.PAID,
                 OrderStatus.PICKED,
@@ -139,7 +144,8 @@ public class OrderService {
     }
 
     public Map<String, Object> getOrderManifest(Long orderId) {
-        Order order = getOrderById(orderId);
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
 
         Map<String, Object> manifest = new HashMap<>();
         manifest.put("orderId", order.getId());

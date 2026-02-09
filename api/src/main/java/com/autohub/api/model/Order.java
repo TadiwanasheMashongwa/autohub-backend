@@ -1,6 +1,6 @@
 package com.autohub.api.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -14,9 +14,10 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER) // 🛠️ Eager load for dashboard speed
     @JoinColumn(name = "user_id", nullable = false)
-    @JsonIgnore
+    // 🛠️ FIXED: Removed @JsonIgnore. Using properties to block recursion but allow basic info.
+    @JsonIgnoreProperties({"orders", "password", "authorities", "accountNonExpired", "accountNonLocked", "credentialsNonExpired", "enabled"})
     private User user;
 
     private LocalDateTime orderDate;
